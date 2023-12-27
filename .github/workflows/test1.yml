@@ -31,6 +31,11 @@ jobs:
         #pip install -r requirements.txt
         pip install seleniumbase
 
+    - name: Check the console scripts interface
+      run: |
+        seleniumbase
+#        sbase
+
     - name: Install chromedriver
       run: |
         seleniumbase install chromedriver
@@ -40,22 +45,6 @@ jobs:
         echo "def test_1(): pass" > nothing.py
         pytest nothing.py
         
-    - name: Install Chrome
-      if: matrix.browser == 'chrome'
-      run: |
-        apt-get install -y google-chrome-stable
-
-    - name: chrome-ubuntu-workaround
-      if: matrix.browser == 'chrome'
-      run: |
-        apt-get update
-        apt-get install -y libgconf-2-4 libatk1.0-0 libatk-bridge2.0-0 libgdk-pixbuf2.0-0 libgtk-3-0 libgbm-dev libnss3-dev libxss-dev libasound2
-
-    - name: Check the console scripts interface
-      run: |
-        seleniumbase
-#        sbase
-
     - name: Run pytest test_mfa_login.py --browser=chrome --xvfb
       run: |
         pytest test_mfa_login.py --browser=chrome --headless -v -s --junit-xml=junit/test-results.xml
