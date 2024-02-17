@@ -49,10 +49,9 @@ jobs:
     #   run: |
     #     pytest test_mfa_login.py --browser=chrome --headless -v -s --junit-xml=junit/test-results.xml
 
-    - name: Run pytest test_mfa_login.py --browser=chrome --xvfb
+    - name: Run pytest test_y2.py --browser=chrome --headless -v -s
       run: |
         pytest test_y2.py --browser=chrome --headless -v -s --junit-xml=junit/test-results.xml
       env:
         EMAIL: ${{ secrets.EMAIL }} 
         PSWD: ${{ secrets.PSWD }}
-        

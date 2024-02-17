@@ -10,16 +10,16 @@ with SB(uc=True) as sb:
     print("email=%s" % email)
 
     sb.driver.uc_open_with_tab("https://www.yad2.co.il/personal/my-ads")
-    
-    sb.type("#email", email)
-    sb.type("#password", pswd)
-    sb.click('span:contains("התחברות")')  # Use :contains() on any tag
+    sb.sleep(4)
 
-    #sb.sleep(5)
+    if sb.is_element_present("#email"):
+        sb.type("#email", email)
+        sb.type("#password", pswd)
+        sb.click('span:contains("התחברות")')  # Use :contains() on any tag
+
     mail = sb.get_text_content("div.profile-block_email__bnW5s")
     print(mail) 
-    sb.assert_element('div:contains(email)')       
-    sb.sleep(5)
+    assert(mail == email)
 
     sb.wait_for_element_present("div[class*=ad-details_detailsActions]", timeout=8)
     ads = sb.find_visible_elements("div[class*=ad-details_detailsActions]")
