@@ -17,7 +17,7 @@ with SB(uc=True) as sb:
         sb.type("#password", pswd)
         sb.click('span:contains("התחברות")')  # Use :contains() on any tag
 
-    mail = sb.get_text_content("div.profile-block_email__bnW5s")
+    mail = sb.get_text_content("div[class*=profile-block_email]")
     print(mail) 
     assert(mail == email)
 
