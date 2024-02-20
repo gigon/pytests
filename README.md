@@ -12,5 +12,5 @@ source sbase_env/Scripts/activate
 ```
 and: 
 ```
-pytest test_y2 -s
+EMAIL=dan_meil@yahoo.com PSWD=xxxx pytest test_y2.py -s --demo
 ```
