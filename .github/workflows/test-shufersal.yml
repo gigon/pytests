@@ -28,29 +28,27 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         python -m pip install --upgrade wheel
-        #pip install -r requirements.txt
-        pip install seleniumbase
+        pip install -r requirements.txt
 
     - name: Check the console scripts interface
       run: |
         seleniumbase
-#        sbase
 
-    - name: Install chromedriver
-      run: |
-        seleniumbase install chromedriver
+    # - name: Install chromedriver
+    #   run: |
+    #     seleniumbase install chromedriver
         
     - name: Make sure pytest is working
       run: |
         echo "def test_1(): pass" > nothing.py
         pytest nothing.py
         
-    # - name: Run pytest test_mfa_login.py --browser=chrome --xvfb
-    #   run: |
-    #     pytest test_mfa_login.py --browser=chrome --headless -v -s --junit-xml=junit/test-results-shuff.xml
+    - name: Run pytest test_mfa_login.py --browser=chrome  --headless -v -s # --xvfb
+      run: |
+        pytest test_mfa_login.py --browser=chrome --headless -v -s
 
     - name: Run pytest test_shufersal.py --browser=chrome --headless -v -s
       run: |
-        pytest test_shufersal.py --browser=chrome --headless -v -s --junit-xml=junit/test-results.xml
+        pytest test_shufersal.py --browser=chrome --headless -v -s
       env:
         SHUFF_ID: ${{ secrets.SHUFF_ID }}         

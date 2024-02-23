@@ -14,11 +14,18 @@ with SB(uc=True) as sb:
     save = os.getenv("SAVE", 'True').lower() in ('true', '1', 't')
     maxRows = int(os.environ.get('MAX_ROWS', sys.maxsize))
 
-    print("clientId=%s activateCoupons=%s save=%s maxRows=%d" % (clientId, activateCoupons, save, maxRows))
+    url = "https://www.shufersal.co.il/couponslp/?ClientID=%s" % clientId
+    print("clientId=%s activateCoupons=%s save=%s maxRows=%d url=%s" % (clientId, activateCoupons, save, maxRows, url))
 
-    sb.driver.uc_open_with_tab("https://www.shufersal.co.il/couponslp/?ClientID=%s" % clientId)
-    #sb.set_window_size(800,1000)
-    
+    sb.driver.uc_open_with_tab(url)
+    sb.sleep(1.2)
+    if not sb.is_element_present('ul.couponsList'):
+        print("OOPS... retry with undetectable")
+        sb.get_new_driver(undetectable=True)
+        sb.driver.uc_open_with_reconnect(url, reconnect_time=3)
+        sb.sleep(1.2)
+
+    #sb.set_window_size(800,1000)    
     rows = []
 
     tableItem = 'ul.couponsList li'
