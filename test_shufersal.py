@@ -59,9 +59,9 @@ with SB(uc=True) as sb:
 
     print("Clicked %d buttons from %d ads" % (numBtns, num_ads))
 
-    time_now = datetime.datetime.now().strftime('%m_%d_%Y_%H_%M_%S') 
+    time_now = datetime.datetime.utcnow().strftime('%m_%d_%Y_%H_%M_%S')
 
-    if save:
+    if save and num_ads>0:
         dirPath = "./data/"
         if not os.path.exists(dirPath):
             os.makedirs(dirPath)
