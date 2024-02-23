@@ -49,7 +49,7 @@ jobs:
 
     - name: Run pytest test_uc_mode.py --browser=chrome --headed -v -s # --xvfb
       run: |
-        pytest test_uc_mode1.py --uc --headless -v -s
+        pytest test_uc_mode1.py --uc --uc-cdp --headed -v -s
 
     - name: Run pytest test_shufersal.py --uc --uc-cdp --headed -v -s
       run: |
