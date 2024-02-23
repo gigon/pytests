@@ -43,12 +43,16 @@ jobs:
         echo "def test_1(): pass" > nothing.py
         pytest nothing.py
         
-    - name: Run pytest test_mfa_login.py --browser=chrome  --headless -v -s # --xvfb
-      run: |
-        pytest test_mfa_login.py --browser=chrome --headless -v -s
+    # - name: Run pytest test_mfa_login.py --browser=chrome  --headless -v -s # --xvfb
+    #   run: |
+    #     pytest test_mfa_login.py --browser=chrome --headless -v -s
 
-    - name: Run pytest test_shufersal.py --browser=chrome --headless -v -s
+    - name: Run pytest test_uc_mode.py --browser=chrome  --headless -v -s # --xvfb
       run: |
-        pytest test_shufersal.py --browser=chrome --headless -v -s
-      env:
-        SHUFF_ID: ${{ secrets.SHUFF_ID }}         
+        pytest test_uc_mode.py --browser=chrome --headless -v -s
+
+    # - name: Run pytest test_shufersal.py --browser=chrome --headless -v -s
+    #   run: |
+    #     pytest test_shufersal.py --browser=chrome --headless -v -s
+    #   env:
+    #     SHUFF_ID: ${{ secrets.SHUFF_ID }}         
