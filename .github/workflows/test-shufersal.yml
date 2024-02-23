@@ -53,6 +53,6 @@ jobs:
 
     - name: Run pytest test_shufersal.py --uc --uc-cdp --headed -v -s
       run: |
-        pytest test_shufersal.py --uc --xvfb -v -s
+        pytest test_shufersal.py --uc --uc-cdp --headed -v -s
       env:
         SHUFF_ID: ${{ secrets.SHUFF_ID }}
