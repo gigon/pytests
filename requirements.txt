@@ -2,5 +2,5 @@ pip>=23.3.2
 wheel>=0.42.0
 pandas==2.2.0
 pyarrow==15.0.0
-seleniumbase==4.22.3
+seleniumbase==4.24.0
 selenium-stealth==1.0.6
