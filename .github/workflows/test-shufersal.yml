@@ -51,8 +51,8 @@ jobs:
       run: |
         pytest test_uc_mode1.py --uc --headless -v -s
 
-    - name: Run pytest test_shufersal.py --uc --headless -v -s
+    - name: Run pytest test_shufersal.py --uc --xvfb -v -s
       run: |
-        pytest test_shufersal.py --uc --headless -v -s
+        pytest test_shufersal.py --uc --xvfb -v -s
       env:
-        SHUFF_ID: ${{ secrets.SHUFF_ID }}         
+        SHUFF_ID: ${{ secrets.SHUFF_ID }}
