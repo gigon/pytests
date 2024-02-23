@@ -5,3 +5,4 @@
 python -m pip install --upgrade pip
 python -m pip install --upgrade wheel
 pip install seleniumbase
+pip install pandas
