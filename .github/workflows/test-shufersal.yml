@@ -34,25 +34,29 @@ jobs:
       run: |
         seleniumbase
 
-    # - name: Install chromedriver
-    #   run: |
-    #     seleniumbase install chromedriver
+    - name: Install chromedriver
+      run: |
+        seleniumbase install chromedriver
         
     - name: Make sure pytest is working
       run: |
         echo "def test_1(): pass" > nothing.py
         pytest nothing.py
         
+    - name: Display Chrome binary that's used
+      run: |
+        python -c "from seleniumbase import undetected; print(undetected.find_chrome_executable())"
+
     # - name: Run pytest test_mfa_login.py --browser=chrome  --headless -v -s # --xvfb
     #   run: |
     #     pytest test_mfa_login.py --browser=chrome --headless -v -s
 
-    - name: Run pytest test_uc_mode.py --browser=chrome --headed -v -s # --xvfb
+    - name: Run pytest test_uc_mode.py # --xvfb
       run: |
         pytest test_uc_mode1.py --uc --uc-cdp --headed -v -s
 
-    - name: Run pytest test_shufersal.py --uc --uc-cdp --headed -v -s
+    - name: Run pytest test_shufersal.py
       run: |
-        pytest test_shufersal.py --uc --uc-cdp --headed -v -s
+        pytest test_shufersal.py --uc --uc-cdp --headed -v -s --reruns=1
       env:
         SHUFF_ID: ${{ secrets.SHUFF_ID }}
