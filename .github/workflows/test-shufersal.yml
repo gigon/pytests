@@ -47,11 +47,11 @@ jobs:
     #   run: |
     #     pytest test_mfa_login.py --browser=chrome --headless -v -s
 
-    - name: Run pytest test_uc_mode.py --browser=chrome  --headless -v -s # --xvfb
+    - name: Run pytest test_uc_mode.py --browser=chrome --headed -v -s # --xvfb
       run: |
         pytest test_uc_mode1.py --uc --headless -v -s
 
-    - name: Run pytest test_shufersal.py --uc --xvfb -v -s
+    - name: Run pytest test_shufersal.py --uc --uc-cdp --headed -v -s
       run: |
         pytest test_shufersal.py --uc --xvfb -v -s
       env:
