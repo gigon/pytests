@@ -55,12 +55,22 @@ jobs:
     #   run: |
     #     pytest test_mfa_login.py --browser=chrome --headless -v -s
 
-    - name: Run pytest test_uc_mode.py # --xvfb
+    - name: Run pytest test_uc_mode.py headless
       run: |
-        pytest test_uc_mode1.py --uc --uc-cdp --headed -v -s --reruns=2 --proxy=89.187.179.163:8443
+        pytest test_uc_mode1.py --uc --uc-cdp --headless -v -s --reruns=1 --proxy=89.187.179.163:8443
 
-    - name: Run pytest test_shufersal.py
+    # - name: Run pytest test_uc_mode.py # --xvfb
+    #   run: |
+    #     pytest test_uc_mode1.py --uc --uc-cdp --headed -v -s --reruns=2 --proxy=89.187.179.163:8443
+
+    - name: Run pytest test_shufersal.py headless
       run: |
-        pytest test_shufersal.py --uc --uc-cdp --headed -v -s --reruns=2 --proxy=89.187.179.163:8443
+        pytest test_shufersal.py --uc --uc-cdp --headless -v -s --reruns=1 --proxy=89.187.179.163:8443
       env:
         SHUFF_ID: ${{ secrets.SHUFF_ID }}
+
+    # - name: Run pytest test_shufersal.py
+    #   run: |
+    #     pytest test_shufersal.py --uc --uc-cdp --headed -v -s --reruns=2 --proxy=89.187.179.163:8443
+    #   env:
+    #     SHUFF_ID: ${{ secrets.SHUFF_ID }}
