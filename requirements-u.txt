@@ -1,0 +1,6 @@
+pip>=23.3.2
+wheel>=0.42.0
+seleniumbase==4.24.0
+pdbp>=1.4.6
+tabcompleter>=1.2.1
+sbvirtualdisplay>=1.2.0
