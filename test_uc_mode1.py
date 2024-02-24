@@ -33,7 +33,8 @@ class BaseTestCase(BaseCase):
         super().tearDown()
     
     def run_test(self):
-        self.driver.uc_open_with_tab("https://nowsecure.nl/#relax")
+        self.driver.uc_open_with_reconnect("https://nowsecure.nl/#relax", reconnect_time=7)
+        #self.driver.uc_open_with_tab("https://nowsecure.nl/#relax")
         self.sleep(1.2)
         if not self.is_text_visible("OH YEAH, you passed!", "h1"):
             self.get_new_driver(undetectable=True)
