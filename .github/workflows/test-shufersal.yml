@@ -57,10 +57,10 @@ jobs:
 
     - name: Run pytest test_uc_mode.py # --xvfb
       run: |
-        pytest test_uc_mode1.py --uc --uc-cdp --headed -v -s
+        pytest test_uc_mode1.py --uc --uc-cdp --headed -v -s --reruns=2 --proxy=89.187.179.163:8443
 
     - name: Run pytest test_shufersal.py
       run: |
-        pytest test_shufersal.py --uc --uc-cdp --headed -v -s --reruns=1
+        pytest test_shufersal.py --uc --uc-cdp --headed -v -s --reruns=2 --proxy=89.187.179.163:8443
       env:
         SHUFF_ID: ${{ secrets.SHUFF_ID }}
