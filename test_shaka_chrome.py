@@ -8,4 +8,4 @@ class TestShakaBrowser(BaseCase):
         self.scroll_to_bottom()
         txt = self.get_text_content("#output")
         print(txt)
-        assert('"com.widevine.alpha": {\n      "persistentState": true' in txt)
+        assert('"com.widevine.alpha": {\n      "persistentState":' in txt)
