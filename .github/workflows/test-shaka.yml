@@ -57,7 +57,7 @@ jobs:
       run: |
         pytest test_mfa_login.py --browser=chrome --headless -v -s
 
-    - name: Run pytest test_shaka_chrome.py  --browser=chrome --headed
+    - name: Run pytest test_shaka_chrome.py  --browser=chrome --xvfb
       run: |
-        pytest test_shaka_chrome.py  --browser=chrome -v -s
+        pytest test_shaka_chrome.py  --browser=chrome -v -s --xvfb
 
