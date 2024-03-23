@@ -53,10 +53,10 @@ jobs:
       run: |
         python -c "from seleniumbase import undetected; print(undetected.find_chrome_executable())"
 
-    # - name: Run pytest test_mfa_login.py --browser=chrome  --headless -v -s # --xvfb
-    #   run: |
-    #     pytest test_mfa_login.py --browser=chrome --headless -v -s
-
-    - name: Run pytest test_shaka_chrome.py headed
+    - name: Run pytest test_mfa_login.py --browser=chrome --headless -v -s # --xvfb
       run: |
-        pytest test_shaka_chrome.py -v -s --headed
+        pytest test_mfa_login.py --browser=chrome --headless -v -s
+
+    - name: Run pytest test_shaka_chrome.py  --browser=chrome headed
+      run: |
+        pytest test_shaka_chrome.py  --browser=chrome -v -s --xvfb
