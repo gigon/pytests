@@ -35,53 +35,10 @@ class BaseTestCase(BaseCase):
         
         print(f"🤖 SeleniumBase initialized with undetected-chrome mode")
     
-    def load_saved_cookies(self, cookie_file, target_url):
-        """
-        Load saved cookies and validate if they provide a valid session
-        Returns True if session is valid, False otherwise
-        """
-        try:
-            print(f"🍪 Loading cookies from {cookie_file}")
-            
-            # Navigate to base domain first
-            self.open('https://www.shufersal.co.il')
-            self.sleep(1.0)
-            
-            # Load and add cookies
-            with open(cookie_file, 'r', encoding='utf-8') as fh:
-                cookies = json.load(fh)
-            
-            cookies_loaded = 0
-            for c in cookies:
-                cookie = {k: v for k, v in c.items() if k in ('name', 'value', 'path', 'domain', 'secure', 'httpOnly', 'expiry')}
-                try:
-                    self.driver.add_cookie(cookie)
-                    cookies_loaded += 1
-                except Exception as e:
-                    # Skip invalid cookies (expired, wrong domain, etc.)
-                    pass
-            
-            print(f"📥 Loaded {cookies_loaded} cookies")
-            
-            # Test session validity by navigating to target URL
-            self.open(target_url)
-            self.sleep(2.0)
-            
-            current_url = self.get_current_url()
-            if 'login' not in current_url and 'coupons' in current_url:
-                print("✅ Session restored successfully!")
-                return True
-            else:
-                print("❌ Session invalid, login required")
-                return False
-                
-        except Exception as e:
-            print(f"⚠️ Failed to load cookies: {e}")
-            return False
-    
-    def perform_login(self, cookie_file):
+    def perform_login(self):
         """
         Perform login with improved reliability and retry logic
+        No cookie persistence - pure stealth approach
         """
         import random  # Import for human-like behaviors
         
@@ -184,14 +141,7 @@ class BaseTestCase(BaseCase):
                         continue
                 
                 if login_successful:
-                    # Save cookies for future use
-                    try:
-                        cookies = self.driver.get_cookies()
-                        with open(cookie_file, 'w', encoding='utf-8') as fh:
-                            json.dump(cookies, fh)
-                        print(f"💾 Saved {len(cookies)} cookies for future sessions")
-                    except Exception as e:
-                        print(f"⚠️ Could not save cookies: {e}")
+                    print("✅ Login completed successfully - using pure stealth mode")
                     
                     # Handle intermediate pages (S page with coupons link)
                     try:
@@ -221,25 +171,16 @@ class BaseTestCase(BaseCase):
         save = os.getenv("SAVE", 'True').lower() in ('true', '1', 't')
         maxRows = int(os.environ.get('MAX_ROWS', sys.maxsize))
 
+        # Check if running in headless mode (for CI/CD compatibility)
+        self.is_headless = '--headless' in sys.argv or self.driver.get_window_size().get('width', 0) == 0
+        if self.is_headless:
+            print("🖥️ Headless mode detected, human-like behaviors will be adapted")
+
         # NEW coupons URL
         url = "https://www.shufersal.co.il/online/he/coupons"
         print("activateCoupons=%s save=%s maxRows=%d url=%s" % (activateCoupons, save, maxRows, url))
 
-        # Cookie persistence filename (using generic name since clientId not needed)
-        cookie_file = os.path.join('.', 'downloaded_files', 'cookies_shufersal.json')
-        os.makedirs(os.path.dirname(cookie_file), exist_ok=True)
-        
-        # Enhanced cookie loading with session validation
-        session_restored = False
-        if os.path.exists(cookie_file):
-            session_restored = self.load_saved_cookies(cookie_file, url)
-        
-        if not session_restored:
-            print("🔐 No valid session found, login required")
-        else:
-            print("✅ Session restored from cookies, testing...")
-
-        # Test if session is working by navigating to coupons page
+        # Navigate directly to coupons page - let stealth handle the rest
         print(f"🌐 Navigating to: {url}")
         self.open(url)
         self.sleep(2.0)
@@ -250,7 +191,7 @@ class BaseTestCase(BaseCase):
         # Check if login is required
         if self.is_element_present('#j_username') or 'login' in current_url:
             print("🔐 Login required")
-            login_success = self.perform_login(cookie_file)
+            login_success = self.perform_login()
             if not login_success:
                 print("❌ Login failed, aborting")
                 return
@@ -267,7 +208,12 @@ class BaseTestCase(BaseCase):
         
         print("🤖 Applying human-like behaviors...")
         
-        # Random scroll behavior (simulate reading)
+        # Check if running in headless mode (for CI/CD compatibility)
+        is_headless = self.is_headless
+        if is_headless:
+            print("🖥️ Headless mode detected, applying compatible behaviors only")
+        
+        # Random scroll behavior (simulate reading) - works in headless
         if random.random() < 0.4:  # 40% chance
             try:
                 # Scroll to a random position to simulate reading
@@ -282,8 +228,8 @@ class BaseTestCase(BaseCase):
             except Exception as e:
                 print(f"⚠️ Could not perform scroll behavior: {e}")
         
-        # Random mouse movement simulation
-        if random.random() < 0.35:  # 35% chance
+        # Random mouse movement simulation - skip in headless mode
+        if not is_headless and random.random() < 0.35:  # 35% chance
             try:
                 # Move mouse to random elements to simulate user behavior
                 from selenium.webdriver.common.action_chains import ActionChains
@@ -299,8 +245,8 @@ class BaseTestCase(BaseCase):
             except Exception as e:
                 print(f"⚠️ Could not perform mouse movement: {e}")
         
-        # Randomly resize browser window (enhanced)
-        if random.random() < 0.35:  # 35% chance (increased from 30%)
+        # Randomly resize browser window - skip in headless mode  
+        if not is_headless and random.random() < 0.35:  # 35% chance (increased from 30%)
             try:
                 current_size = self.driver.get_window_size()
                 # Vary window size slightly from current size
@@ -313,7 +259,7 @@ class BaseTestCase(BaseCase):
                 print(f"🖥️ Randomly resized browser to {new_width}x{new_height}")
                 self.sleep(random.uniform(0.5, 1.8))
                 
-                # Occasionally minimize and restore (very human-like)
+                # Occasionally minimize and restore (very human-like) - skip in headless
                 if random.random() < 0.15:  # 15% chance when resizing
                     try:
                         self.driver.minimize_window()
@@ -328,7 +274,7 @@ class BaseTestCase(BaseCase):
             except Exception as e:
                 print(f"⚠️ Could not resize window: {e}")
         
-        # Random page interaction delays
+        # Random page interaction delays - works in headless
         interaction_delay = random.uniform(1.2, 3.5)
         print(f"⏱️ Random interaction delay: {interaction_delay:.1f}s")
         self.sleep(interaction_delay)
@@ -343,8 +289,8 @@ class BaseTestCase(BaseCase):
                     pre_click_delay = random.uniform(0.5, 1.2)
                     self.sleep(pre_click_delay)
                     
-                    # Sometimes move mouse to button first before clicking
-                    if random.random() < 0.6:  # 60% chance
+                    # Sometimes move mouse to button first before clicking - skip in headless
+                    if not self.is_headless and random.random() < 0.6:  # 60% chance
                         try:
                             disclaimer_element = self.find_element(disclaimer_button_selector)
                             from selenium.webdriver.common.action_chains import ActionChains
@@ -541,8 +487,8 @@ class BaseTestCase(BaseCase):
                                     )
                                     self.sleep(random.uniform(0.4, 0.8))
                                     
-                                    # Sometimes hover over button before clicking (very human-like)
-                                    if random.random() < 0.7:  # 70% chance
+                                    # Sometimes hover over button before clicking (very human-like) - skip in headless
+                                    if not self.is_headless and random.random() < 0.7:  # 70% chance
                                         try:
                                             from selenium.webdriver.common.action_chains import ActionChains
                                             ActionChains(self.driver).move_to_element(activate_button).perform()

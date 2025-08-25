@@ -67,12 +67,19 @@ jobs:
 
     - name: Run pytest test_shufersal.py headless
       run: |
-        pytest test_shufersal.py --uc --uc-cdp --headless -v -s --proxy=${{ secrets.PROXY1 }}
+        # Create directories for file operations
+        mkdir -p data
+        # Run with new environment variables and enhanced settings
+        SAVE=True ACTIVATE=False MAX_ROWS=5 pytest test_shufersal.py --uc --uc-cdp --headless -v -s --proxy=${{ secrets.PROXY1 }}
       env:
-        SHUFF_ID: ${{ secrets.SHUFF_ID }}
+        SHUFERSAL_EMAIL: ${{ secrets.SHUFERSAL_EMAIL }}
+        SHUFERSAL_PSWD: ${{ secrets.SHUFERSAL_PSWD }}
 
-    # - name: Run pytest test_shufersal.py
-    #   run: |
-    #     pytest test_shufersal.py --uc --uc-cdp --headed -v -s --reruns=2 --proxy=${{ secrets.PROXY1 }}
-    #   env:
-    #     SHUFF_ID: ${{ secrets.SHUFF_ID }}
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: shufersal-test-results
+        path: |
+          data/*.csv
+        retention-days: 7

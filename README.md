@@ -40,7 +40,10 @@ SAVE=True ACTIVATE=True MAX_ROWS=30 pytest test_shufersal.py --uc -s -v
 # Test run (limited coupons, no activation)
 SAVE=False ACTIVATE=False MAX_ROWS=3 pytest test_shufersal.py --uc -s -v
 ```
-
+#### Run headless like in github wokflow:
+```
+ACTIVATE=False MAX_ROWS=2 SAVE=True pytest test_shufersal.py -s -v --uc --headless
+```
 ### Features
 - 🤖 **Undetected Chrome Mode**: Bypasses bot detection automatically
 - 🍪 **Cookie Persistence**: Saves login sessions in JSON files for reuse
