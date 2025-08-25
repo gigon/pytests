@@ -6,14 +6,23 @@ import json
 from seleniumbase import SB
 from selenium_stealth import stealth
 from seleniumbase import BaseCase
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
+
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+    print('Loaded .env file')
+except ImportError:
+    print('python-dotenv not installed, using system environment variables only')
 
 BaseCase.main(__name__, __file__)
 
 class BaseTestCase(BaseCase):
     def setUp(self):
         super().setUp()
+        
+        # Apply stealth to the current driver for better bot protection
+        # Note: --uc mode (undetected-chrome) is used via command line, this adds extra stealth
         stealth(self.driver,
             languages=["en-US", "en"],
             vendor="Google Inc.",
@@ -21,195 +30,205 @@ class BaseTestCase(BaseCase):
             webgl_vendor="Intel Inc.",
             renderer="Intel Iris OpenGL Engine",
             fix_hairline=True,
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
         )
+        
+        print(f"🤖 SeleniumBase initialized with undetected-chrome mode")
+    
+    def load_saved_cookies(self, cookie_file, target_url):
+        """
+        Load saved cookies and validate if they provide a valid session
+        Returns True if session is valid, False otherwise
+        """
+        try:
+            print(f"🍪 Loading cookies from {cookie_file}")
+            
+            # Navigate to base domain first
+            self.open('https://www.shufersal.co.il')
+            self.sleep(1.0)
+            
+            # Load and add cookies
+            with open(cookie_file, 'r', encoding='utf-8') as fh:
+                cookies = json.load(fh)
+            
+            cookies_loaded = 0
+            for c in cookies:
+                cookie = {k: v for k, v in c.items() if k in ('name', 'value', 'path', 'domain', 'secure', 'httpOnly', 'expiry')}
+                try:
+                    self.driver.add_cookie(cookie)
+                    cookies_loaded += 1
+                except Exception as e:
+                    # Skip invalid cookies (expired, wrong domain, etc.)
+                    pass
+            
+            print(f"📥 Loaded {cookies_loaded} cookies")
+            
+            # Test session validity by navigating to target URL
+            self.open(target_url)
+            self.sleep(2.0)
+            
+            current_url = self.get_current_url()
+            if 'login' not in current_url and 'coupons' in current_url:
+                print("✅ Session restored successfully!")
+                return True
+            else:
+                print("❌ Session invalid, login required")
+                return False
+                
+        except Exception as e:
+            print(f"⚠️ Failed to load cookies: {e}")
+            return False
+    
+    def perform_login(self, cookie_file):
+        """
+        Perform login with improved reliability and retry logic
+        """
+        email = os.environ.get('SHUFERSAL_EMAIL')
+        passwd = os.environ.get('SHUFERSAL_PSWD')
+        if not email or not passwd:
+            print('❌ Missing SHUFERSAL_EMAIL or SHUFERSAL_PSWD in environment')
+            return False
 
-    def setUp(self):
-        super().setUp()
-        # <<< Run custom setUp() code for tests AFTER the super().setUp() >>>
-
-    def tearDown(self):
-        self.save_teardown_screenshot()  # On failure or "--screenshot"
-        if self.has_exception():
-            # <<< Run custom code if the test failed. >>>
-            pass
-        else:
-            # <<< Run custom code if the test passed. >>>
-            pass
-        # (Wrap unreliable tearDown() code in a try/except block.)
-        # <<< Run custom tearDown() code BEFORE the super().tearDown() >>>
-        super().tearDown()
+        print(f"🔐 Logging in with email: {email[:10]}...")
+        
+        for attempt in range(3):  # Retry up to 3 times
+            try:
+                if attempt > 0:
+                    print(f"🔄 Login attempt {attempt + 1}/3")
+                
+                # Wait for login form
+                if not self.wait_for_element_visible('#j_username', timeout=15):
+                    print("❌ Login form not found")
+                    continue
+                
+                # Clear and fill form using JavaScript (more reliable)
+                self.execute_script("document.querySelector('#j_username').value = '';")
+                self.execute_script("document.querySelector('#j_password').value = '';")
+                
+                # Escape credentials for JavaScript
+                esc_email = email.replace('\'', "\\'").replace('"', '\\"')
+                esc_pass = passwd.replace('\'', "\\'").replace('"', '\\"')
+                
+                self.execute_script(f"document.querySelector('#j_username').value = '{esc_email}';")
+                self.execute_script(f"document.querySelector('#j_password').value = '{esc_pass}';")
+                
+                # Verify email was set correctly (check for Hebrew corruption)
+                set_email = self.execute_script("return document.querySelector('#j_username').value;")
+                if '.' not in set_email:
+                    print("⚠️ Email corruption detected, retrying...")
+                    continue
+                
+                # Submit form - target the specific login button
+                try:
+                    # Look for the submit button with the correct class
+                    if self.is_element_present('#loginForm button[type="submit"].btn-login'):
+                        print("🔘 Clicking login button (btn-login)...")
+                        self.click('#loginForm button[type="submit"].btn-login')
+                    elif self.is_element_present('#loginForm > button'):
+                        print("🔘 Clicking login form button...")
+                        self.click('#loginForm > button')
+                    elif self.is_element_present('button[type="submit"]'):
+                        print("🔘 Clicking submit button...")
+                        self.click('button[type="submit"]')
+                    else:
+                        print("🔘 No button found, trying Enter key...")
+                        self.send_keys('#j_password', '\n')
+                except Exception as e:
+                    print(f"⚠️ Error clicking login button: {e}")
+                    # Fallback to Enter key
+                    self.send_keys('#j_password', '\n')
+                
+                # Wait for navigation away from login
+                login_successful = False
+                for i in range(30):
+                    self.sleep(1)
+                    try:
+                        current_url = self.get_current_url()
+                        if 'login' not in current_url:
+                            print(f"✅ Login successful! Redirected to: {current_url}")
+                            login_successful = True
+                            break
+                    except Exception:
+                        continue
+                
+                if login_successful:
+                    # Save cookies for future use
+                    try:
+                        cookies = self.driver.get_cookies()
+                        with open(cookie_file, 'w', encoding='utf-8') as fh:
+                            json.dump(cookies, fh)
+                        print(f"💾 Saved {len(cookies)} cookies for future sessions")
+                    except Exception as e:
+                        print(f"⚠️ Could not save cookies: {e}")
+                    
+                    # Handle intermediate pages (S page with coupons link)
+                    try:
+                        current_url = self.get_current_url()
+                        if '/online/he/S' in current_url and self.is_element_present('#couponsLinkCart > div > div > img'):
+                            print("🔄 Navigating from intermediate page to coupons...")
+                            self.click('#couponsLinkCart > div > div > img')
+                            self.sleep(1.0)
+                    except Exception as e:
+                        print(f"⚠️ Error handling post-login navigation: {e}")
+                    
+                    return True
+                else:
+                    print("❌ Login timed out")
+                    
+            except Exception as e:
+                print(f"❌ Login attempt {attempt + 1} failed: {e}")
+                if attempt < 2:  # Not the last attempt
+                    self.sleep(2)  # Wait before retry
+        
+        print("❌ All login attempts failed")
+        return False
     
     def run_test(self):
-        clientId = os.environ.get('SHUFF_ID')
-        if clientId is None :
-            print("SHUFF_ID not provided in ENV")
-            exit(1)
-
+        # SHUFF_ID no longer needed since login session system is now used
         activateCoupons = os.getenv("ACTIVATE", 'True').lower() in ('true', '1', 't')
         save = os.getenv("SAVE", 'True').lower() in ('true', '1', 't')
         maxRows = int(os.environ.get('MAX_ROWS', sys.maxsize))
 
         # NEW coupons URL
         url = "https://www.shufersal.co.il/online/he/coupons"
-        print("clientId=%s activateCoupons=%s save=%s maxRows=%d url=%s" % (clientId, activateCoupons, save, maxRows, url))
+        print("activateCoupons=%s save=%s maxRows=%d url=%s" % (activateCoupons, save, maxRows, url))
 
-        # cookie persistence filename per clientId
-        cookie_file = os.path.join('.', 'downloaded_files', 'cookies_shufersal_%s.json' % clientId)
+        # Cookie persistence filename (using generic name since clientId not needed)
+        cookie_file = os.path.join('.', 'downloaded_files', 'cookies_shufersal.json')
         os.makedirs(os.path.dirname(cookie_file), exist_ok=True)
+        
+        # Enhanced cookie loading with session validation
+        session_restored = False
+        if os.path.exists(cookie_file):
+            session_restored = self.load_saved_cookies(cookie_file, url)
+        
+        if not session_restored:
+            print("🔐 No valid session found, login required")
+        else:
+            print("✅ Session restored from cookies, testing...")
 
-        # If SHUFERSAL_PROFILE_DIR is set, start Chrome with that persistent profile (headful)
-        profile_dir = os.environ.get('SHUFERSAL_PROFILE_DIR')
-        if profile_dir:
-            print('Starting Chrome with user-data-dir=', profile_dir)
-            try:
-                try:
-                    self.driver.quit()
-                except Exception:
-                    pass
-
-                opts = Options()
-                opts.add_argument(f'--user-data-dir={profile_dir}')
-                profile_name = os.environ.get('SHUFERSAL_PROFILE_NAME')
-                if profile_name:
-                    opts.add_argument(f'--profile-directory={profile_name}')
-                # Reduce automation flags but run headful so manual CAPTCHA solve is possible
-                opts.add_experimental_option('excludeSwitches', ['enable-automation'])
-                opts.add_experimental_option('useAutomationExtension', False)
-                opts.add_argument('--disable-blink-features=AutomationControlled')
-                opts.add_argument('--start-maximized')
-
-                driver = webdriver.Chrome(options=opts)
-                # Attach the new driver to the test instance
-                try:
-                    self.driver = driver
-                except Exception:
-                    self._driver = driver
-                    self.driver = driver
-
-                # Re-apply stealth to the new driver instance
-                try:
-                    stealth(self.driver,
-                        languages=["en-US", "en"],
-                        vendor="Google Inc.",
-                        platform="Win32",
-                        webgl_vendor="Intel Inc.",
-                        renderer="Intel Iris OpenGL Engine",
-                        fix_hairline=True,
-                    )
-                except Exception as e:
-                    print('Warning: stealth() failed on persistent driver:', e)
-
-                self.sleep(1.0)
-            except Exception as e:
-                print('Failed to start Chrome with profile:', e)
-
-        # Try to reuse cookies if available (must be on same domain first)
-        try:
-            self.open('https://www.shufersal.co.il')
-            self.sleep(1.0)
-            if os.path.exists(cookie_file):
-                try:
-                    with open(cookie_file, 'r', encoding='utf-8') as fh:
-                        cookies = json.load(fh)
-                    for c in cookies:
-                        cookie = {k: v for k, v in c.items() if k in ('name', 'value', 'path', 'domain', 'secure', 'httpOnly', 'expiry')}
-                        try:
-                            self.driver.add_cookie(cookie)
-                        except Exception as e:
-                            print('Warning: could not add a cookie:', e)
-                    print('Loaded cookies from', cookie_file)
-                except Exception as e:
-                    print('Failed to load cookies:', e)
-        except Exception as e:
-            print('Warning opening base domain for cookies:', e)
-
-        # Open coupons page (will redirect to login if no valid session)
+        # Test if session is working by navigating to coupons page
+        print(f"🌐 Navigating to: {url}")
         self.open(url)
-        self.sleep(1.2)
-
-        # Detect captcha early and abort to avoid bans
-        try:
-            if 'captcha' in self.get_page_source().lower():
-                raise Exception('CAPTCHA detected on page - aborting automation')
-        except Exception as e:
-            print(e)
-            return
-
-        # If redirected to login or login form present -> perform login
-        try:
-            current = self.get_current_url()
-        except Exception:
-            current = ''
-
-        if self.is_element_present('#j_username') or 'login' in current:
-            print('Login required - performing login flow')
-            email = os.environ.get('SHUFERSAL_EMAIL')
-            passwd = os.environ.get('SHUFERSAL_PSWD')
-            if not email or not passwd:
-                print('Missing SHUFERSAL_EMAIL or SHUFERSAL_PSWD in env - cannot login')
+        self.sleep(2.0)
+        
+        current_url = self.get_current_url()
+        print(f"📍 Current URL: {current_url}")
+        
+        # Check if login is required
+        if self.is_element_present('#j_username') or 'login' in current_url:
+            print("🔐 Login required")
+            login_success = self.perform_login(cookie_file)
+            if not login_success:
+                print("❌ Login failed, aborting")
                 return
-
-            # Prefer normal typing; fall back to JS assignment if typing fails
-            try:
-                self.wait_for_element_visible('#j_username', timeout=10)
-                self.type('#j_username', email)
-                self.type('#j_password', passwd)
-            except Exception:
-                # JS fallback (escape single quotes)
-                esc_email = email.replace('\'', "\\'")
-                esc_pass = passwd.replace('\'', "\\'")
-                js = "var e=document.querySelector('#j_username'); if(e) e.value='%s'; var p=document.querySelector('#j_password'); if(p) p.value='%s';" % (esc_email, esc_pass)
-                try:
-                    self.execute_script(js)
-                except Exception as e:
-                    print('Failed to set credentials via JS:', e)
-                    return
-
-            # Submit form - try clicking a submit button if present, else send Enter
-            try:
-                if self.is_element_present('button[type=submit]'):
-                    self.click('button[type=submit]')
-                else:
-                    self.send_keys('#j_password', '\n')
-            except Exception:
-                # last resort JS submit
-                try:
-                    self.execute_script("var f=document.querySelector('form'); if(f) f.submit();")
-                except Exception as e:
-                    print('Failed to submit login form:', e)
-                    return
-
-            # wait for navigation away from login
-            for i in range(30):
-                self.sleep(1)
-                try:
-                    cur = self.get_current_url()
-                except Exception:
-                    cur = ''
-                if 'login' not in cur:
-                    print('Login appears successful, current url=', cur)
-                    break
-            else:
-                print('Timed out waiting for login to complete')
-                return
-
-            # Save cookies after login for reuse
-            try:
-                cookies = self.driver.get_cookies()
-                with open(cookie_file, 'w', encoding='utf-8') as fh:
-                    json.dump(cookies, fh)
-                print('Saved cookies to', cookie_file)
-            except Exception as e:
-                print('Could not save cookies:', e)
-
-            # If landed on the intermediate S page, click the coupons icon to go to coupons page
-            try:
-                cur = self.get_current_url()
-                if '/online/he/S' in cur and self.is_element_present('#couponsLinkCart > div > div > img'):
-                    self.click('#couponsLinkCart > div > div > img')
-                    self.sleep(1.0)
-            except Exception as e:
-                print('Error handling post-login landing page:', e)
+        elif 'coupons' in current_url:
+            print("✅ Already logged in, proceeding to coupons")
+        else:
+            print(f"⚠️ Unexpected page: {current_url}")
+            # Try to navigate to coupons anyway
+            self.open(url)
+            self.sleep(2.0)
 
         # At this point we should be on the coupons page (or close) - apply filter to show only non-activated coupons
         try:
@@ -224,12 +243,11 @@ class BaseTestCase(BaseCase):
         except Exception as e:
             print('Filter application failed:', e)
 
-        # Collect coupon items using new page structure, with fallback to old selector
+        # Collect coupon items using the correct new page structure
         rows = []
-        list_selector = '#couponsPage .couponsCards section ul li'
-        if not self.is_element_present(list_selector):
-            list_selector = 'ul.couponsList li'
-
+        # Updated selector based on actual HTML structure
+        list_selector = '.couponsCards .tileContainer li'
+        
         ads = []
         try:
             ads = self.find_visible_elements(list_selector)
@@ -237,96 +255,149 @@ class BaseTestCase(BaseCase):
             # find_visible_elements may throw if selector not present
             try:
                 ads = self.find_elements(list_selector)
-            except Exception:
-                ads = []
+            except Exception as e:
+                print('Failed to find coupon elements with selector "%s": %s' % (list_selector, e))
 
-        num_ads = len(ads)
-        numBtns = 0
-        print('found %s ads' % num_ads)
+        print('Found %d coupon items' % len(ads))
 
-        for ind in range(min(maxRows, num_ads)):
-            row = {}
-            tableItemSelector = list_selector + ':nth-child(%s)' % (ind+1)
-            # Try several possible title/subtitle selectors to be robust
-            title = ''
-            for t in [' .title', ' .subtitleTitle', ' .couponTitle', ' h3', ' .name']:
-                try:
-                    if self.is_element_present(tableItemSelector + t):
-                        title = self.get_text(tableItemSelector + t)
-                        break
-                except Exception:
-                    continue
-            subtitle = ''
-            for s in [' .subtitle', ' p', ' .coupon-sub']:
-                try:
-                    if self.is_element_present(tableItemSelector + s):
-                        subtitle = self.get_text(tableItemSelector + s)
-                        break
-                except Exception:
-                    continue
-
-            # Determine loaded/activated state using a few heuristics
-            loaded = False
+        for i, ad in enumerate(ads):
+            if i >= maxRows:
+                break
             try:
-                if self.is_element_present(tableItemSelector + ' .successMessageNew .miniPlus'):
-                    loaded = True
-                if self.is_element_present(tableItemSelector + ' .activated'):
-                    loaded = True
-                if self.is_element_present(tableItemSelector + ' .btn.disabled'):
-                    loaded = True
-            except Exception:
-                pass
-
-            print("ad %s (%s): title=%s subtitle=%s" % (str(ind+1), str(loaded), title, subtitle))
-            row['title'] = title.strip()
-            row['subtitle'] = subtitle.strip()
-
-            # Activate coupon if requested and not already loaded
-            if activateCoupons and not loaded:
-                btn_selectors = [
-                    tableItemSelector + ' button.btn.js-enable-btn.miglog-btn-promo.miglog-btn-add',
-                    tableItemSelector + ' .btn.js-enable-btn',
-                    tableItemSelector + ' button.btn'
-                ]
-                clicked = False
-                for b in btn_selectors:
+                # Extract coupon info from the actual page structure
+                title = ''
+                store = ''
+                description = ''
+                percent = ''
+                
+                # Extract title from the description span within the tile
+                try:
+                    # Look for the description within buyDescription comment tags
+                    description_elem = ad.find_element("css selector", ".description")
+                    description = description_elem.text.strip()
+                    
+                    # Try to extract store/brand name (usually at the end after comma)
+                    if ',' in description:
+                        parts = description.split(',')
+                        if len(parts) >= 2:
+                            title = parts[0].strip()
+                            store = parts[-1].strip()
+                        else:
+                            title = description
+                    else:
+                        title = description
+                except:
+                    pass
+                
+                # Extract price/offer details
+                try:
+                    price_elem = ad.find_element("css selector", ".price .number")
+                    percent = price_elem.text.strip()
+                except:
+                    pass
+                
+                # If still no title, try alternative methods
+                if not title:
                     try:
-                        if self.is_element_present(b):
-                            self.click(b)
-                            numBtns += 1
-                            clicked = True
-                            self.sleep(0.6)
-                            break
+                        # Try the hidden title div
+                        title_elem = ad.find_element("css selector", ".title")
+                        title = title_elem.text.strip()
+                    except:
+                        pass
+                
+                # Extract from alt text if needed
+                if not title:
+                    try:
+                        img_elem = ad.find_element("css selector", ".imgContainer img.pic")
+                        alt_text = img_elem.get_attribute('alt')
+                        if alt_text and 'cleartext' in alt_text:
+                            # Parse the cleartext content
+                            import re
+                            match = re.search(r'cleartext-->(.*?)<', alt_text)
+                            if match:
+                                content = match.group(1)
+                                if '₪' in content:
+                                    parts = content.split('₪')[0].strip()
+                                    title = parts
+                    except:
+                        pass
+
+                # If we couldn't extract structured data, fall back to all text
+                if not title and not description:
+                    try:
+                        all_text = ad.text.strip()
+                        lines = [line.strip() for line in all_text.split('\n') if line.strip()]
+                        if lines:
+                            title = lines[0]
+                            if len(lines) > 1:
+                                description = ' '.join(lines[1:])
+                    except:
+                        title = f'Coupon {i+1}'
+                        description = 'Unable to extract details'
+
+                row = {
+                    'title': title,
+                    'store': store,
+                    'description': description,
+                    'percent': percent,
+                    'activated': False  # Will be set to True if activation succeeds
+                }
+                
+                # Debug: Print coupon details
+                print(f'Coupon {i+1}: {title} | {store} | {percent}')
+                
+                if activateCoupons:
+                    try:
+                        # Look for the activation button - based on actual HTML structure
+                        activated = False
+                        
+                        # Primary selector: the activation button
+                        try:
+                            activate_button = ad.find_element("css selector", "button.miglog-btn-promo.miglog-btn-add")
+                            if activate_button and activate_button.is_displayed() and activate_button.is_enabled():
+                                # Check if it's actually an activation button (Hebrew text)
+                                btn_text = activate_button.text.strip()
+                                if 'הפעלה' in btn_text:  # "הפעלה" means "activation" in Hebrew
+                                    # Use driver's execute_script to scroll to element instead of SeleniumBase method
+                                    self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", activate_button)
+                                    self.sleep(0.5)
+                                    activate_button.click()
+                                    self.sleep(0.5)
+                                    row['activated'] = True
+                                    activated = True
+                                    print(f'✓ Activated coupon: {title}')
+                                else:
+                                    print(f'⚠ Button found but text is: "{btn_text}" (not activation)')
+                            else:
+                                print(f'⚠ Activation button not clickable for: {title}')
+                        except Exception as e:
+                            print(f'⚠ Could not find activation button for: {title} - {e}')
+                            
                     except Exception as e:
-                        print('Click failed for selector', b, e)
-                if not clicked:
-                    print('No activation button found for item', ind+1)
+                        print(f'Failed to activate coupon {i+1}: {e}')
 
-            rows.append(row)
+                rows.append(row)
+                
+            except Exception as e:
+                print(f'Error processing coupon {i+1}: {e}')
+                continue
 
-        print('Clicked %d buttons from %d ads' % (numBtns, num_ads))
+        # Save results to CSV if requested
+        if save and rows:
+            try:
+                df = pd.DataFrame(rows)
+                timestamp = datetime.datetime.now().strftime('%m_%d_%Y_%H_%M_%S')
+                csv_file = os.path.join('.', 'data', f'{timestamp}.csv')
+                os.makedirs(os.path.dirname(csv_file), exist_ok=True)
+                df.to_csv(csv_file, index=False, encoding='utf-8-sig')
+                print(f'Saved {len(rows)} coupons to {csv_file}')
+            except Exception as e:
+                print(f'Failed to save CSV: {e}')
 
-        time_now = datetime.datetime.utcnow().strftime('%m_%d_%Y_%H_%M_%S')
+        activated_count = sum(1 for row in rows if row.get('activated', False))
+        print(f'Summary: Found {len(rows)} coupons, activated {activated_count}')
 
-        if save and num_ads>0:
-            dirPath = "./data/"
-            if not os.path.exists(dirPath):
-                os.makedirs(dirPath)
-            filePath = dirPath + time_now + ".csv"
 
-            df = pd.DataFrame(rows)
-
-            with open(filePath, 'w+', encoding='utf-8-sig') as csv_file:
-                df.to_csv(csv_file, index=False, lineterminator='\n')
-            print('Saved %s' % filePath)
-
-            if maxRows == sys.maxsize:
-                filePath = dirPath + 'current.csv'
-                with open(filePath, 'w+', encoding='utf-8-sig') as csv_file:
-                    df.to_csv(csv_file, index=False, lineterminator='\n')
-                print('Saved also to %s' % filePath)
-        pass
-
-class MyTests(BaseTestCase):
-    def test_run(self):
+class Test_shufersal(BaseTestCase):
+    def test_basic(self):
         self.run_test()

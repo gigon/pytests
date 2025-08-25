@@ -16,12 +16,34 @@ EMAIL=dan_meil@yahoo.com PSWD=xxxx pytest test_y2.py -s --demo
 ```
 
 ## Shufersal
-* Need to use a chrome profile where i logged-in, and give its path to the script!
-* DO NOT run another Chrome instance with same profile at same time (can corrupt!) 
+The automation uses undetected-chrome mode (`--uc`) for stealth browsing and bypassing bot detection.
+Session persistence is handled via JSON cookie files, not Chrome profiles.
+
+### Environment Setup
+Create a `.env` file with your credentials:
 ```
-SAVE=True ACTIVATE=True MAX_ROWS=30 SHUFERSAL_PROFILE_DIR="$SHUFERSAL_PROFILE_DIR" SHUFERSAL_PROFILE_NAME="$SHUFERSAL_PROFILE_NAME" pytest test_shufersal.py --uc -s -v
+SHUFERSAL_EMAIL=your.email@example.com
+SHUFERSAL_PSWD=your_password
 ```
-Just to test:
+
+### Usage
+Run the shell script (recommended):
+```bash
+./SHUFERSAL.sh
 ```
-SAVE=False ACTIVATE=False MAX_ROWS=3 SHUFERSAL_PROFILE_DIR="$SHUFERSAL_PROFILE_DIR" SHUFERSAL_PROFILE_NAME="$SHUFERSAL_PROFILE_NAME" pytest test_shufersal.py --uc -s -v
+
+Or run directly with pytest:
+```bash
+# Production run
+SAVE=True ACTIVATE=True MAX_ROWS=30 pytest test_shufersal.py --uc -s -v
+
+# Test run (limited coupons, no activation)
+SAVE=False ACTIVATE=False MAX_ROWS=3 pytest test_shufersal.py --uc -s -v
 ```
+
+### Features
+- 🤖 **Undetected Chrome Mode**: Bypasses bot detection automatically
+- 🍪 **Cookie Persistence**: Saves login sessions in JSON files for reuse
+- 🔄 **Auto Login**: Handles Hebrew interface and login flow
+- 📊 **Data Export**: Saves coupon data to timestamped CSV files
+- ⚡ **Smart Activation**: Only activates available coupons
