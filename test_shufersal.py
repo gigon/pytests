@@ -340,8 +340,28 @@ class BaseTestCase(BaseCase):
                     'store': store,
                     'description': description,
                     'percent': percent,
+                    'dateValid': '',  # Will be extracted from smallText grayBg
+                    'restrictions': '',  # Will be extracted from smallText grayBg
                     'activated': False  # Will be set to True if activation succeeds
                 }
+                
+                # Extract validity date and restrictions from the smallText section
+                try:
+                    small_text_elem = ad.find_element("css selector", ".smallText.grayBg")
+                    small_text = small_text_elem.text.strip()
+                    
+                    # Split by the right and left sides
+                    if small_text:
+                        lines = small_text.split('\n')
+                        for line in lines:
+                            line = line.strip()
+                            if 'תקף עד:' in line:  # "Valid until" in Hebrew
+                                row['dateValid'] = line
+                            elif 'מוגבל' in line:  # "Limited" in Hebrew
+                                row['restrictions'] = line
+                except Exception:
+                    # If extraction fails, keep empty strings
+                    pass
                 
                 # Debug: Print coupon details
                 print(f'Coupon {i+1}: {title} | {store} | {percent}')
