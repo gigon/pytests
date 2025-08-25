@@ -57,20 +57,26 @@ jobs:
     #   run: |
     #     pytest test_mfa_login.py --browser=chrome --headless -v -s
 
-    - name: Run pytest test_uc_mode.py headless
-      run: |
-        pytest test_uc_mode1.py --uc --uc-cdp --headless -v -s --proxy=${{ secrets.PROXY1 }}
+    # Commented out: External site tests may fail in GitHub Actions environment
+    # - name: Run pytest test_uc_mode.py headless
+    #   run: |
+    #     pytest test_uc_mode1.py --uc --uc-cdp --headless -v -s --proxy=${{ secrets.PROXY1 }}
 
-    - name: Run pytest test_uc_mode.py # --xvfb
-      run: |
-        pytest test_uc_mode1.py --uc --uc-cdp --headed -v -s --reruns=2 --proxy=${{ secrets.PROXY1 }}
+    # - name: Run pytest test_uc_mode.py # --xvfb
+    #   run: |
+    #     pytest test_uc_mode1.py --uc --uc-cdp --headed -v -s --reruns=2 --proxy=${{ secrets.PROXY1 }}
 
     - name: Run pytest test_shufersal.py headless
       run: |
         # Create directories for file operations
         mkdir -p data
         # Run with new environment variables and enhanced settings
-        SAVE=True ACTIVATE=False MAX_ROWS=5 pytest test_shufersal.py --uc --uc-cdp --headless -v -s --proxy=${{ secrets.PROXY1 }}
+        # Note: Proxy is optional for Shufersal since stealth mode handles detection
+        if [ -n "${{ secrets.PROXY1 }}" ]; then
+          SAVE=True ACTIVATE=False MAX_ROWS=5 pytest test_shufersal.py --uc --uc-cdp --headless -v -s --proxy=${{ secrets.PROXY1 }}
+        else
+          SAVE=True ACTIVATE=False MAX_ROWS=5 pytest test_shufersal.py --uc --uc-cdp --headless -v -s
+        fi
       env:
         SHUFERSAL_EMAIL: ${{ secrets.SHUFERSAL_EMAIL }}
         SHUFERSAL_PSWD: ${{ secrets.SHUFERSAL_PSWD }}
