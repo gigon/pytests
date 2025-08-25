@@ -1,7 +1,7 @@
 import os
 import sys
 import datetime
-import pandas as pd
+import csv
 import json
 from seleniumbase import SB
 from selenium_stealth import stealth
@@ -529,11 +529,18 @@ class BaseTestCase(BaseCase):
         # Save results to CSV if requested
         if save and rows:
             try:
-                df = pd.DataFrame(rows)
                 timestamp = datetime.datetime.now().strftime('%m_%d_%Y_%H_%M_%S')
                 csv_file = os.path.join('.', 'data', f'{timestamp}.csv')
                 os.makedirs(os.path.dirname(csv_file), exist_ok=True)
-                df.to_csv(csv_file, index=False, encoding='utf-8-sig')
+                
+                # Write CSV using built-in csv module
+                with open(csv_file, 'w', newline='', encoding='utf-8-sig') as f:
+                    if rows:
+                        fieldnames = rows[0].keys()
+                        writer = csv.DictWriter(f, fieldnames=fieldnames)
+                        writer.writeheader()
+                        writer.writerows(rows)
+                
                 print(f'Saved {len(rows)} coupons to {csv_file}')
             except Exception as e:
                 print(f'Failed to save CSV: {e}')
