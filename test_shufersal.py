@@ -188,6 +188,43 @@ class BaseTestCase(BaseCase):
         current_url = self.get_current_url()
         print(f"📍 Current URL: {current_url}")
         
+        # Always check for geo-blocking first, regardless of URL
+        # Shufersal shows maintenance page even with correct URL when geo-blocked
+        print("🌍 Checking for geo-blocking or access restrictions...")
+        try:
+            body_html = self.get_attribute("body", "innerHTML")
+            if body_html:
+                # Check for specific Shufersal geo-blocking maintenance page
+                # This page shows when accessing from outside Israel: <body><center><img src="maintenance image"></center></body>
+                if "maintenance1.jpg" in body_html.lower() and body_html.count("<img") == 1:
+                    print("🚨 SHUFERSAL GEO-BLOCKING DETECTED: Maintenance page shown (non-Israeli IP)")
+                    print("   This indicates you're accessing from outside Israel")
+                    print("   Shufersal blocks non-Israeli IPs with a maintenance page")
+                    print("   Consider running from an Israeli IP or VPN")
+                    print(f"   Page source length: {len(body_html)} characters")
+                    return  # Exit early as geo-blocked
+                    
+                # Also check for the specific maintenance image URL
+                if "s3-eu-west-1.amazonaws.com/www.shufersal.co.il/online/errorpage/Maintenance1.jpg" in body_html:
+                    print("🚨 SHUFERSAL GEO-BLOCKING DETECTED: Maintenance image found")
+                    print("   Detected specific geo-blocking maintenance page")
+                    print(f"   Page source length: {len(body_html)} characters")
+                    return  # Exit early as geo-blocked
+                    
+            # Check page text for other blocking indicators
+            page_text = self.get_text("body").lower()
+            blocked_indicators = [
+                'access denied', 'not available', 'geo', 'location', 'country',
+                'לא זמין', 'גישה נחסמה', 'מדינה', 'איזור'
+            ]
+            
+            for indicator in blocked_indicators:
+                if indicator in page_text:
+                    print(f"🚨 Possible geo-blocking detected: '{indicator}' found in page")
+                    
+        except Exception as e:
+            print(f"⚠️ Could not check for geo-blocking: {e}")
+        
         # Check if login is required
         if self.is_element_present('#j_username') or 'login' in current_url:
             print("🔐 Login required")
@@ -199,20 +236,6 @@ class BaseTestCase(BaseCase):
             print("✅ Already logged in, proceeding to coupons")
         else:
             print(f"⚠️ Unexpected page: {current_url}")
-            
-            # Debug: Check if we're being geo-blocked or redirected
-            print("🌍 Checking for geo-blocking or access restrictions...")
-            page_text = self.get_text("body").lower()
-            
-            blocked_indicators = [
-                'access denied', 'not available', 'geo', 'location', 'country',
-                'לא זמין', 'גישה נחסמה', 'מדינה', 'איזור'
-            ]
-            
-            for indicator in blocked_indicators:
-                if indicator in page_text:
-                    print(f"🚨 Possible geo-blocking detected: '{indicator}' found in page")
-                    
             # Try to navigate to coupons anyway
             self.open(url)
             self.sleep(2.0)
