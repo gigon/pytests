@@ -83,6 +83,8 @@ class BaseTestCase(BaseCase):
         """
         Perform login with improved reliability and retry logic
         """
+        import random  # Import for human-like behaviors
+        
         email = os.environ.get('SHUFERSAL_EMAIL')
         passwd = os.environ.get('SHUFERSAL_PSWD')
         if not email or not passwd:
@@ -101,7 +103,7 @@ class BaseTestCase(BaseCase):
                     print("❌ Login form not found")
                     continue
                 
-                # Clear and fill form using JavaScript (more reliable)
+                # Clear and fill form using JavaScript with human-like typing simulation
                 self.execute_script("document.querySelector('#j_username').value = '';")
                 self.execute_script("document.querySelector('#j_password').value = '';")
                 
@@ -109,8 +111,38 @@ class BaseTestCase(BaseCase):
                 esc_email = email.replace('\'', "\\'").replace('"', '\\"')
                 esc_pass = passwd.replace('\'', "\\'").replace('"', '\\"')
                 
-                self.execute_script(f"document.querySelector('#j_username').value = '{esc_email}';")
-                self.execute_script(f"document.querySelector('#j_password').value = '{esc_pass}';")
+                # Add human-like typing delays
+                print("⌨️ Simulating human-like typing...")
+                
+                # Type email with random delays between characters (occasionally)
+                if random.random() < 0.4:  # 40% chance to use slow typing
+                    email_field = self.find_element('#j_username')
+                    for char in esc_email:
+                        email_field.send_keys(char)
+                        self.sleep(random.uniform(0.05, 0.15))  # Random typing speed
+                    self.sleep(random.uniform(0.2, 0.5))  # Pause before password
+                    
+                    # Sometimes use backspace and retype (very human-like mistake simulation)
+                    if random.random() < 0.1:  # 10% chance
+                        print("🔄 Simulating typing mistake and correction...")
+                        email_field.send_keys('\b\b')  # Delete last 2 chars
+                        self.sleep(random.uniform(0.1, 0.3))
+                        email_field.send_keys(esc_email[-2:])  # Retype them
+                        self.sleep(random.uniform(0.2, 0.4))
+                    
+                    # Type password with random delays
+                    password_field = self.find_element('#j_password')
+                    for char in esc_pass:
+                        password_field.send_keys(char)
+                        self.sleep(random.uniform(0.03, 0.12))
+                else:
+                    # Fast JavaScript method for efficiency
+                    self.execute_script(f"document.querySelector('#j_username').value = '{esc_email}';")
+                    self.sleep(random.uniform(0.1, 0.3))
+                    self.execute_script(f"document.querySelector('#j_password').value = '{esc_pass}';")
+                
+                # Random delay before verification (simulate user checking input)
+                self.sleep(random.uniform(0.3, 0.8))
                 
                 # Verify email was set correctly (check for Hebrew corruption)
                 set_email = self.execute_script("return document.querySelector('#j_username').value;")
@@ -229,6 +261,124 @@ class BaseTestCase(BaseCase):
             # Try to navigate to coupons anyway
             self.open(url)
             self.sleep(2.0)
+
+        # Add enhanced human-like behaviors to avoid bot detection
+        import random
+        
+        print("🤖 Applying human-like behaviors...")
+        
+        # Random scroll behavior (simulate reading)
+        if random.random() < 0.4:  # 40% chance
+            try:
+                # Scroll to a random position to simulate reading
+                scroll_position = random.randint(200, 800)
+                self.execute_script(f"window.scrollTo(0, {scroll_position});")
+                print(f"📜 Random scroll to position {scroll_position}")
+                self.sleep(random.uniform(0.8, 2.0))
+                
+                # Scroll back up
+                self.execute_script("window.scrollTo(0, 0);")
+                self.sleep(random.uniform(0.3, 0.7))
+            except Exception as e:
+                print(f"⚠️ Could not perform scroll behavior: {e}")
+        
+        # Random mouse movement simulation
+        if random.random() < 0.35:  # 35% chance
+            try:
+                # Move mouse to random elements to simulate user behavior
+                from selenium.webdriver.common.action_chains import ActionChains
+                action = ActionChains(self.driver)
+                
+                # Find some elements to hover over
+                elements = self.find_elements("div, span, button")[:5]  # First 5 elements
+                if elements:
+                    target_element = random.choice(elements)
+                    action.move_to_element(target_element).perform()
+                    print("🖱️ Random mouse hover simulation")
+                    self.sleep(random.uniform(0.2, 0.8))
+            except Exception as e:
+                print(f"⚠️ Could not perform mouse movement: {e}")
+        
+        # Randomly resize browser window (enhanced)
+        if random.random() < 0.35:  # 35% chance (increased from 30%)
+            try:
+                current_size = self.driver.get_window_size()
+                # Vary window size slightly from current size
+                width_variance = random.randint(-150, 200)
+                height_variance = random.randint(-80, 120)
+                new_width = max(1000, min(1600, current_size['width'] + width_variance))
+                new_height = max(700, min(1200, current_size['height'] + height_variance))
+                
+                self.driver.set_window_size(new_width, new_height)
+                print(f"🖥️ Randomly resized browser to {new_width}x{new_height}")
+                self.sleep(random.uniform(0.5, 1.8))
+                
+                # Occasionally minimize and restore (very human-like)
+                if random.random() < 0.15:  # 15% chance when resizing
+                    try:
+                        self.driver.minimize_window()
+                        print("📉 Minimized window")
+                        self.sleep(random.uniform(0.5, 1.2))
+                        self.driver.maximize_window()
+                        print("📈 Restored window")
+                        self.sleep(random.uniform(0.3, 0.8))
+                    except Exception:
+                        pass  # Some drivers don't support minimize
+                        
+            except Exception as e:
+                print(f"⚠️ Could not resize window: {e}")
+        
+        # Random page interaction delays
+        interaction_delay = random.uniform(1.2, 3.5)
+        print(f"⏱️ Random interaction delay: {interaction_delay:.1f}s")
+        self.sleep(interaction_delay)
+        
+        # Random chance to close disclaimer message (enhanced - 3 out of 4 times = 75%)
+        if random.random() < 0.75:  # 75% chance
+            try:
+                disclaimer_button_selector = "#couponsPage > div.disclaimerSection > button"
+                if self.is_element_present(disclaimer_button_selector):
+                    print("💬 Closing disclaimer message...")
+                    # Variable delay before clicking (more human-like)
+                    pre_click_delay = random.uniform(0.5, 1.2)
+                    self.sleep(pre_click_delay)
+                    
+                    # Sometimes move mouse to button first before clicking
+                    if random.random() < 0.6:  # 60% chance
+                        try:
+                            disclaimer_element = self.find_element(disclaimer_button_selector)
+                            from selenium.webdriver.common.action_chains import ActionChains
+                            ActionChains(self.driver).move_to_element(disclaimer_element).perform()
+                            self.sleep(random.uniform(0.2, 0.5))
+                            print("🖱️ Moved mouse to disclaimer button")
+                        except Exception:
+                            pass
+                    
+                    self.click(disclaimer_button_selector)
+                    post_click_delay = random.uniform(0.3, 0.9)
+                    self.sleep(post_click_delay)
+                    print("✅ Disclaimer closed")
+                else:
+                    print("ℹ️ No disclaimer message found")
+            except Exception as e:
+                print(f"⚠️ Could not close disclaimer: {e}")
+        else:
+            print("🎲 Randomly chose not to close disclaimer (human-like behavior)")
+        
+        # Random additional browsing simulation
+        if random.random() < 0.25:  # 25% chance
+            try:
+                # Simulate checking page elements (like reading)
+                print("👀 Simulating reading behavior...")
+                self.sleep(random.uniform(1.0, 2.5))
+                
+                # Random refresh occasionally (very human-like when things don't load properly)
+                if random.random() < 0.1:  # 10% chance within this 25%
+                    print("🔄 Random page refresh")
+                    self.refresh_page()
+                    self.sleep(random.uniform(2.0, 4.0))
+            except Exception as e:
+                print(f"⚠️ Could not perform reading simulation: {e}")
 
         # At this point we should be on the coupons page (or close) - apply filter to show only non-activated coupons
         try:
@@ -371,6 +521,10 @@ class BaseTestCase(BaseCase):
                         # Look for the activation button - based on actual HTML structure
                         activated = False
                         
+                        # Add human-like delay before attempting activation
+                        activation_delay = random.uniform(0.3, 1.2)
+                        self.sleep(activation_delay)
+                        
                         # Primary selector: the activation button
                         try:
                             activate_button = ad.find_element("css selector", "button.miglog-btn-promo.miglog-btn-add")
@@ -378,11 +532,35 @@ class BaseTestCase(BaseCase):
                                 # Check if it's actually an activation button (Hebrew text)
                                 btn_text = activate_button.text.strip()
                                 if 'הפעלה' in btn_text:  # "הפעלה" means "activation" in Hebrew
-                                    # Use driver's execute_script to scroll to element instead of SeleniumBase method
-                                    self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", activate_button)
-                                    self.sleep(0.5)
+                                    
+                                    # Human-like behavior: scroll to element with random offset
+                                    scroll_offset = random.randint(-50, 50)
+                                    self.driver.execute_script(
+                                        f"arguments[0].scrollIntoView({{block: 'center'}}); window.scrollBy(0, {scroll_offset});", 
+                                        activate_button
+                                    )
+                                    self.sleep(random.uniform(0.4, 0.8))
+                                    
+                                    # Sometimes hover over button before clicking (very human-like)
+                                    if random.random() < 0.7:  # 70% chance
+                                        try:
+                                            from selenium.webdriver.common.action_chains import ActionChains
+                                            ActionChains(self.driver).move_to_element(activate_button).perform()
+                                            self.sleep(random.uniform(0.2, 0.6))
+                                            print(f"🖱️ Hovered over activation button for: {title}")
+                                        except Exception:
+                                            pass  # Continue if hover fails
+                                    
+                                    # Random pre-click delay
+                                    pre_click_delay = random.uniform(0.1, 0.5)
+                                    self.sleep(pre_click_delay)
+                                    
                                     activate_button.click()
-                                    self.sleep(0.5)
+                                    
+                                    # Random post-click delay
+                                    post_click_delay = random.uniform(0.4, 1.0)
+                                    self.sleep(post_click_delay)
+                                    
                                     row['activated'] = True
                                     activated = True
                                     print(f'✓ Activated coupon: {title}')
