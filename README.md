@@ -16,10 +16,12 @@ EMAIL=dan_meil@yahoo.com PSWD=xxxx pytest test_y2.py -s --demo
 ```
 
 ## Shufersal
+* Need to use a chrome profile where i logged-in, and give its path to the script!
+* DO NOT run another Chrome instance with same profile at same time (can corrupt!) 
 ```
-MAX_ROWS=3 SAVE=True ACTIVATE=True SHUFF_ID=1234567 pytest test_shufersal.py --uc -s -v
+SAVE=True ACTIVATE=True MAX_ROWS=30 SHUFERSAL_PROFILE_DIR="$SHUFERSAL_PROFILE_DIR" SHUFERSAL_PROFILE_NAME="$SHUFERSAL_PROFILE_NAME" pytest test_shufersal.py --uc -s -v
 ```
 Just to test:
 ```
-MAX_ROWS=1 SAVE=0 ACTIVATE=0 SHUFF_ID=1234567 pytest test_shufersal.py -s -v --uc --uc-cdp --headed
+SAVE=False ACTIVATE=False MAX_ROWS=3 SHUFERSAL_PROFILE_DIR="$SHUFERSAL_PROFILE_DIR" SHUFERSAL_PROFILE_NAME="$SHUFERSAL_PROFILE_NAME" pytest test_shufersal.py --uc -s -v
 ```
