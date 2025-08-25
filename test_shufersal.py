@@ -199,6 +199,20 @@ class BaseTestCase(BaseCase):
             print("✅ Already logged in, proceeding to coupons")
         else:
             print(f"⚠️ Unexpected page: {current_url}")
+            
+            # Debug: Check if we're being geo-blocked or redirected
+            print("🌍 Checking for geo-blocking or access restrictions...")
+            page_text = self.get_text("body").lower()
+            
+            blocked_indicators = [
+                'access denied', 'not available', 'geo', 'location', 'country',
+                'לא זמין', 'גישה נחסמה', 'מדינה', 'איזור'
+            ]
+            
+            for indicator in blocked_indicators:
+                if indicator in page_text:
+                    print(f"🚨 Possible geo-blocking detected: '{indicator}' found in page")
+                    
             # Try to navigate to coupons anyway
             self.open(url)
             self.sleep(2.0)
@@ -328,33 +342,161 @@ class BaseTestCase(BaseCase):
 
         # At this point we should be on the coupons page (or close) - apply filter to show only non-activated coupons
         try:
-            if self.is_element_present('#mCSB_4_container > li > div > label > button'):
-                self.click('#mCSB_4_container > li > div > label > button')
+            print("🔍 DEBUG: Analyzing page structure...")
+            
+            # Debug: Check page title and URL
+            current_url = self.get_current_url()
+            page_title = self.get_title()
+            print(f"📄 Page title: {page_title}")
+            print(f"🌐 Current URL: {current_url}")
+            
+            # Debug: Check if this is actually the coupons page
+            if 'coupons' not in current_url:
+                print(f"⚠️ WARNING: Not on coupons page! URL: {current_url}")
+                
+            # Debug: Check for common page elements
+            print("🔍 Checking for page elements...")
+            body_text = self.get_text("body")[:500]  # First 500 chars
+            print(f"📝 Page body start: {body_text}")
+            
+            # Check for specific coupons page elements
+            elements_to_check = [
+                "h1", "h2", ".couponsCards", ".tileContainer", 
+                "#couponsPage", ".disclaimerSection", "#mCSB_4_container"
+            ]
+            
+            for selector in elements_to_check:
+                is_present = self.is_element_present(selector)
+                print(f"🔍 Element '{selector}': {'✅ Found' if is_present else '❌ Not found'}")
+                
+            # Try to apply filter with detailed logging
+            print("🔧 Attempting to apply coupon filter...")
+            filter_button = '#mCSB_4_container > li > div > label > button'
+            if self.is_element_present(filter_button):
+                print(f"✅ Found filter button: {filter_button}")
+                self.click(filter_button)
                 self.sleep(0.3)
-            if self.is_element_present('#mCSB_4_container > div > li.wrapperBtnShowResult.showInList > button'):
-                self.click('#mCSB_4_container > div > li.wrapperBtnShowResult.showInList > button')
+                print("🔘 Clicked filter button")
+            else:
+                print(f"❌ Filter button not found: {filter_button}")
+                
+            result_button = '#mCSB_4_container > div > li.wrapperBtnShowResult.showInList > button'
+            if self.is_element_present(result_button):
+                print(f"✅ Found result button: {result_button}")
+                self.click(result_button)
                 self.sleep(0.6)
-            if not self.is_element_present('#facet-results > div > ul > li:nth-child(1) > div > button > div > span:nth-child(1)'):
-                print('Warning: filter label not visible - filter may not have applied')
+                print("🔘 Clicked result button")
+            else:
+                print(f"❌ Result button not found: {result_button}")
+                
+            filter_label = '#facet-results > div > ul > li:nth-child(1) > div > button > div > span:nth-child(1)'
+            if not self.is_element_present(filter_label):
+                print('⚠️ Warning: filter label not visible - filter may not have applied')
+                
+                # Debug: Try alternative filter selectors
+                print("🔍 Searching for alternative filter elements...")
+                alternative_filters = [
+                    "#mCSB_4_container", ".filterContainer", ".facet-results",
+                    "[data-filter]", ".filter-button", ".coupon-filter"
+                ]
+                
+                for alt_selector in alternative_filters:
+                    if self.is_element_present(alt_selector):
+                        print(f"✅ Found alternative filter element: {alt_selector}")
+                        # Get the element text for debugging
+                        try:
+                            element_text = self.get_text(alt_selector)[:200]
+                            print(f"📝 Element text: {element_text}")
+                        except:
+                            print(f"⚠️ Could not get text for {alt_selector}")
+                    else:
+                        print(f"❌ Alternative filter not found: {alt_selector}")
+            else:
+                print("✅ Filter applied successfully")
+                
         except Exception as e:
-            print('Filter application failed:', e)
+            print(f'❌ Filter application failed: {e}')
+            # Continue anyway - maybe coupons are visible without filter
 
         # Collect coupon items using the correct new page structure
         rows = []
         # Updated selector based on actual HTML structure
         list_selector = '.couponsCards .tileContainer li'
         
+        print(f"🔍 DEBUG: Searching for coupons with selector: {list_selector}")
+        
         ads = []
         try:
             ads = self.find_visible_elements(list_selector)
-        except Exception:
+            print(f"✅ Found {len(ads)} visible elements with find_visible_elements")
+        except Exception as e:
+            print(f"⚠️ find_visible_elements failed: {e}")
             # find_visible_elements may throw if selector not present
             try:
                 ads = self.find_elements(list_selector)
+                print(f"✅ Found {len(ads)} elements with find_elements")
             except Exception as e:
-                print('Failed to find coupon elements with selector "%s": %s' % (list_selector, e))
+                print(f'❌ Failed to find coupon elements with selector "{list_selector}": {e}')
+                
+                # Try alternative selectors
+                alternative_selectors = [
+                    '.couponsCards li',
+                    '.tileContainer li', 
+                    'li[data-coupon]',
+                    '.coupon-item',
+                    '.coupon-card',
+                    '[class*="coupon"]',
+                    '[class*="tile"]',
+                    '.grid-item',
+                    'li'  # Very broad fallback
+                ]
+                
+                print("🔍 Trying alternative selectors...")
+                for alt_selector in alternative_selectors:
+                    try:
+                        alt_ads = self.find_elements(alt_selector)
+                        if len(alt_ads) > 0:
+                            print(f"✅ Alternative selector '{alt_selector}' found {len(alt_ads)} elements")
+                            # Take a sample to see if they look like coupons
+                            if len(alt_ads) > 0:
+                                sample_text = alt_ads[0].text[:100] if hasattr(alt_ads[0], 'text') else "No text"
+                                print(f"📝 Sample element text: {sample_text}")
+                                if len(alt_ads) <= 200:  # Reasonable number for coupons
+                                    ads = alt_ads
+                                    list_selector = alt_selector
+                                    print(f"🎯 Using alternative selector: {alt_selector}")
+                                    break
+                    except Exception:
+                        continue
 
-        print('Found %d coupon items' % len(ads))
+        print(f'📊 Found {len(ads)} coupon items with final selector: {list_selector}')
+        
+        # Debug: If still no coupons found, save page source for analysis
+        if len(ads) == 0:
+            print("🚨 NO COUPONS FOUND - Performing detailed analysis...")
+            
+            # Save page source for debugging
+            try:
+                page_source = self.get_page_source()
+                debug_file = os.path.join('.', 'data', 'debug_page_source.html')
+                os.makedirs(os.path.dirname(debug_file), exist_ok=True)
+                with open(debug_file, 'w', encoding='utf-8') as f:
+                    f.write(page_source)
+                print(f"💾 Saved page source to {debug_file} for analysis")
+                
+                # Look for any signs of coupons in the page source
+                coupon_indicators = ['coupon', 'קופון', 'הפעל', 'הנחה', 'הטבה']
+                for indicator in coupon_indicators:
+                    if indicator in page_source:
+                        print(f"✅ Found '{indicator}' in page source")
+                    else:
+                        print(f"❌ '{indicator}' not found in page source")
+                        
+                # Check page length
+                print(f"📏 Page source length: {len(page_source)} characters")
+                
+            except Exception as e:
+                print(f"⚠️ Could not save page source: {e}")
 
         for i, ad in enumerate(ads):
             if i >= maxRows:
