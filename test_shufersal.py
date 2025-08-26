@@ -33,7 +33,7 @@ class BaseTestCase(BaseCase):
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
         )
         
-        print(f"🤖 SeleniumBase initialized with undetected-chrome mode")
+        print("[ROBOT] SeleniumBase initialized with undetected-chrome mode")
     
     def perform_login(self):
         """
@@ -45,19 +45,19 @@ class BaseTestCase(BaseCase):
         email = os.environ.get('SHUFERSAL_EMAIL')
         passwd = os.environ.get('SHUFERSAL_PSWD')
         if not email or not passwd:
-            print('❌ Missing SHUFERSAL_EMAIL or SHUFERSAL_PSWD in environment')
+            print('[FAIL] Missing SHUFERSAL_EMAIL or SHUFERSAL_PSWD in environment')
             return False
 
-        print(f"🔐 Logging in with email: {email[:10]}...")
+        print(f"[AUTH] Logging in with email: {email[:10]}...")
         
         for attempt in range(3):  # Retry up to 3 times
             try:
                 if attempt > 0:
-                    print(f"🔄 Login attempt {attempt + 1}/3")
+                    print(f"[RETRY] Login attempt {attempt + 1}/3")
                 
                 # Wait for login form
                 if not self.wait_for_element_visible('#j_username', timeout=15):
-                    print("❌ Login form not found")
+                    print("[FAIL] Login form not found")
                     continue
                 
                 # Clear and fill form using JavaScript with human-like typing simulation
@@ -69,7 +69,7 @@ class BaseTestCase(BaseCase):
                 esc_pass = passwd.replace('\'', "\\'").replace('"', '\\"')
                 
                 # Add human-like typing delays
-                print("⌨️ Simulating human-like typing...")
+                print("[KEYBOARD] Simulating human-like typing...")
                 
                 # Type email with random delays between characters (occasionally)
                 if random.random() < 0.4:  # 40% chance to use slow typing
@@ -81,7 +81,7 @@ class BaseTestCase(BaseCase):
                     
                     # Sometimes use backspace and retype (very human-like mistake simulation)
                     if random.random() < 0.1:  # 10% chance
-                        print("🔄 Simulating typing mistake and correction...")
+                        print("[RETRY] Simulating typing mistake and correction...")
                         email_field.send_keys('\b\b')  # Delete last 2 chars
                         self.sleep(random.uniform(0.1, 0.3))
                         email_field.send_keys(esc_email[-2:])  # Retype them
@@ -104,7 +104,7 @@ class BaseTestCase(BaseCase):
                 # Verify email was set correctly (check for Hebrew corruption)
                 set_email = self.execute_script("return document.querySelector('#j_username').value;")
                 if '.' not in set_email:
-                    print("⚠️ Email corruption detected, retrying...")
+                    print("[WARN] Email corruption detected, retrying...")
                     continue
                 
                 # Submit form - target the specific login button
@@ -123,7 +123,7 @@ class BaseTestCase(BaseCase):
                         print("🔘 No button found, trying Enter key...")
                         self.send_keys('#j_password', '\n')
                 except Exception as e:
-                    print(f"⚠️ Error clicking login button: {e}")
+                    print(f"[WARN] Error clicking login button: {e}")
                     # Fallback to Enter key
                     self.send_keys('#j_password', '\n')
                 
@@ -134,35 +134,35 @@ class BaseTestCase(BaseCase):
                     try:
                         current_url = self.get_current_url()
                         if 'login' not in current_url:
-                            print(f"✅ Login successful! Redirected to: {current_url}")
+                            print(f"[OK] Login successful! Redirected to: {current_url}")
                             login_successful = True
                             break
                     except Exception:
                         continue
                 
                 if login_successful:
-                    print("✅ Login completed successfully - using pure stealth mode")
+                    print("[OK] Login completed successfully - using pure stealth mode")
                     
                     # Handle intermediate pages (S page with coupons link)
                     try:
                         current_url = self.get_current_url()
                         if '/online/he/S' in current_url and self.is_element_present('#couponsLinkCart > div > div > img'):
-                            print("🔄 Navigating from intermediate page to coupons...")
+                            print("[RETRY] Navigating from intermediate page to coupons...")
                             self.click('#couponsLinkCart > div > div > img')
                             self.sleep(1.0)
                     except Exception as e:
-                        print(f"⚠️ Error handling post-login navigation: {e}")
+                        print(f"[WARN] Error handling post-login navigation: {e}")
                     
                     return True
                 else:
-                    print("❌ Login timed out")
+                    print("[FAIL] Login timed out")
                     
             except Exception as e:
-                print(f"❌ Login attempt {attempt + 1} failed: {e}")
+                print(f"[FAIL] Login attempt {attempt + 1} failed: {e}")
                 if attempt < 2:  # Not the last attempt
                     self.sleep(2)  # Wait before retry
         
-        print("❌ All login attempts failed")
+        print("[FAIL] All login attempts failed")
         return False
     
     def run_test(self):
@@ -174,30 +174,30 @@ class BaseTestCase(BaseCase):
         # Check if running in headless mode (for CI/CD compatibility)
         self.is_headless = '--headless' in sys.argv or self.driver.get_window_size().get('width', 0) == 0
         if self.is_headless:
-            print("🖥️ Headless mode detected, human-like behaviors will be adapted")
+            print("[SCREEN] Headless mode detected, human-like behaviors will be adapted")
 
         # NEW coupons URL
         url = "https://www.shufersal.co.il/online/he/coupons"
         print("activateCoupons=%s save=%s maxRows=%d url=%s" % (activateCoupons, save, maxRows, url))
 
         # Navigate directly to coupons page - let stealth handle the rest
-        print(f"🌐 Navigating to: {url}")
+        print(f"[WEB] Navigating to: {url}")
         self.open(url)
         self.sleep(2.0)
         
         current_url = self.get_current_url()
-        print(f"📍 Current URL: {current_url}")
+        print(f"[LOC] Current URL: {current_url}")
         
         # Always check for geo-blocking first, regardless of URL
         # Shufersal shows maintenance page even with correct URL when geo-blocked
-        print("🌍 Checking for geo-blocking or access restrictions...")
+        print("[GLOBE] Checking for geo-blocking or access restrictions...")
         try:
             body_html = self.get_attribute("body", "innerHTML")
             if body_html:
                 # Check for specific Shufersal geo-blocking maintenance page
                 # This page shows when accessing from outside Israel: <body><center><img src="maintenance image"></center></body>
                 if "maintenance1.jpg" in body_html.lower() and body_html.count("<img") == 1:
-                    print("🚨 SHUFERSAL GEO-BLOCKING DETECTED: Maintenance page shown (non-Israeli IP)")
+                    print("[ALERT] SHUFERSAL GEO-BLOCKING DETECTED: Maintenance page shown (non-Israeli IP)")
                     print("   This indicates you're accessing from outside Israel")
                     print("   Shufersal blocks non-Israeli IPs with a maintenance page")
                     print("   Consider running from an Israeli IP or VPN")
@@ -206,7 +206,7 @@ class BaseTestCase(BaseCase):
                     
                 # Also check for the specific maintenance image URL
                 if "s3-eu-west-1.amazonaws.com/www.shufersal.co.il/online/errorpage/Maintenance1.jpg" in body_html:
-                    print("🚨 SHUFERSAL GEO-BLOCKING DETECTED: Maintenance image found")
+                    print("[ALERT] SHUFERSAL GEO-BLOCKING DETECTED: Maintenance image found")
                     print("   Detected specific geo-blocking maintenance page")
                     print(f"   Page source length: {len(body_html)} characters")
                     return  # Exit early as geo-blocked
@@ -220,22 +220,22 @@ class BaseTestCase(BaseCase):
             
             for indicator in blocked_indicators:
                 if indicator in page_text:
-                    print(f"🚨 Possible geo-blocking detected: '{indicator}' found in page")
+                    print(f"[ALERT] Possible geo-blocking detected: '{indicator}' found in page")
                     
         except Exception as e:
-            print(f"⚠️ Could not check for geo-blocking: {e}")
+            print(f"[WARN] Could not check for geo-blocking: {e}")
         
         # Check if login is required
         if self.is_element_present('#j_username') or 'login' in current_url:
-            print("🔐 Login required")
+            print("[AUTH] Login required")
             login_success = self.perform_login()
             if not login_success:
-                print("❌ Login failed, aborting")
+                print("[FAIL] Login failed, aborting")
                 return
         elif 'coupons' in current_url:
-            print("✅ Already logged in, proceeding to coupons")
+            print("[OK] Already logged in, proceeding to coupons")
         else:
-            print(f"⚠️ Unexpected page: {current_url}")
+            print(f"[WARN] Unexpected page: {current_url}")
             # Try to navigate to coupons anyway
             self.open(url)
             self.sleep(2.0)
@@ -243,12 +243,12 @@ class BaseTestCase(BaseCase):
         # Add enhanced human-like behaviors to avoid bot detection
         import random
         
-        print("🤖 Applying human-like behaviors...")
+        print("[ROBOT] Applying human-like behaviors...")
         
         # Check if running in headless mode (for CI/CD compatibility)
         is_headless = self.is_headless
         if is_headless:
-            print("🖥️ Headless mode detected, applying compatible behaviors only")
+            print("[SCREEN] Headless mode detected, applying compatible behaviors only")
         
         # Random scroll behavior (simulate reading) - works in headless
         if random.random() < 0.4:  # 40% chance
@@ -256,14 +256,14 @@ class BaseTestCase(BaseCase):
                 # Scroll to a random position to simulate reading
                 scroll_position = random.randint(200, 800)
                 self.execute_script(f"window.scrollTo(0, {scroll_position});")
-                print(f"📜 Random scroll to position {scroll_position}")
+                print(f"[SCROLL] Random scroll to position {scroll_position}")
                 self.sleep(random.uniform(0.8, 2.0))
                 
                 # Scroll back up
                 self.execute_script("window.scrollTo(0, 0);")
                 self.sleep(random.uniform(0.3, 0.7))
             except Exception as e:
-                print(f"⚠️ Could not perform scroll behavior: {e}")
+                print(f"[WARN] Could not perform scroll behavior: {e}")
         
         # Random mouse movement simulation - skip in headless mode
         if not is_headless and random.random() < 0.35:  # 35% chance
@@ -277,10 +277,10 @@ class BaseTestCase(BaseCase):
                 if elements:
                     target_element = random.choice(elements)
                     action.move_to_element(target_element).perform()
-                    print("🖱️ Random mouse hover simulation")
+                    print("[MOUSE] Random mouse hover simulation")
                     self.sleep(random.uniform(0.2, 0.8))
             except Exception as e:
-                print(f"⚠️ Could not perform mouse movement: {e}")
+                print(f"[WARN] Could not perform mouse movement: {e}")
         
         # Randomly resize browser window - skip in headless mode  
         if not is_headless and random.random() < 0.35:  # 35% chance (increased from 30%)
@@ -293,7 +293,7 @@ class BaseTestCase(BaseCase):
                 new_height = max(700, min(1200, current_size['height'] + height_variance))
                 
                 self.driver.set_window_size(new_width, new_height)
-                print(f"🖥️ Randomly resized browser to {new_width}x{new_height}")
+                print(f"[SCREEN] Randomly resized browser to {new_width}x{new_height}")
                 self.sleep(random.uniform(0.5, 1.8))
                 
                 # Occasionally minimize and restore (very human-like) - skip in headless
@@ -309,11 +309,11 @@ class BaseTestCase(BaseCase):
                         pass  # Some drivers don't support minimize
                         
             except Exception as e:
-                print(f"⚠️ Could not resize window: {e}")
+                print(f"[WARN] Could not resize window: {e}")
         
         # Random page interaction delays - works in headless
         interaction_delay = random.uniform(1.2, 3.5)
-        print(f"⏱️ Random interaction delay: {interaction_delay:.1f}s")
+        print(f"[TIME] Random interaction delay: {interaction_delay:.1f}s")
         self.sleep(interaction_delay)
         
         # Random chance to close disclaimer message (enhanced - 3 out of 4 times = 75%)
@@ -333,20 +333,20 @@ class BaseTestCase(BaseCase):
                             from selenium.webdriver.common.action_chains import ActionChains
                             ActionChains(self.driver).move_to_element(disclaimer_element).perform()
                             self.sleep(random.uniform(0.2, 0.5))
-                            print("🖱️ Moved mouse to disclaimer button")
+                            print("[MOUSE] Moved mouse to disclaimer button")
                         except Exception:
                             pass
                     
                     self.click(disclaimer_button_selector)
                     post_click_delay = random.uniform(0.3, 0.9)
                     self.sleep(post_click_delay)
-                    print("✅ Disclaimer closed")
+                    print("[OK] Disclaimer closed")
                 else:
-                    print("ℹ️ No disclaimer message found")
+                    print("[INFO] No disclaimer message found")
             except Exception as e:
-                print(f"⚠️ Could not close disclaimer: {e}")
+                print(f"[WARN] Could not close disclaimer: {e}")
         else:
-            print("🎲 Randomly chose not to close disclaimer (human-like behavior)")
+            print("[DICE] Randomly chose not to close disclaimer (human-like behavior)")
         
         # Random additional browsing simulation
         if random.random() < 0.25:  # 25% chance
@@ -357,30 +357,30 @@ class BaseTestCase(BaseCase):
                 
                 # Random refresh occasionally (very human-like when things don't load properly)
                 if random.random() < 0.1:  # 10% chance within this 25%
-                    print("🔄 Random page refresh")
+                    print("[RETRY] Random page refresh")
                     self.refresh_page()
                     self.sleep(random.uniform(2.0, 4.0))
             except Exception as e:
-                print(f"⚠️ Could not perform reading simulation: {e}")
+                print(f"[WARN] Could not perform reading simulation: {e}")
 
         # At this point we should be on the coupons page (or close) - apply filter to show only non-activated coupons
         try:
-            print("🔍 DEBUG: Analyzing page structure...")
+            print("[SEARCH] DEBUG: Analyzing page structure...")
             
             # Debug: Check page title and URL
             current_url = self.get_current_url()
             page_title = self.get_title()
-            print(f"📄 Page title: {page_title}")
-            print(f"🌐 Current URL: {current_url}")
+            print(f"[PAGE] Page title: {page_title}")
+            print(f"[WEB] Current URL: {current_url}")
             
             # Debug: Check if this is actually the coupons page
             if 'coupons' not in current_url:
-                print(f"⚠️ WARNING: Not on coupons page! URL: {current_url}")
+                print(f"[WARN] WARNING: Not on coupons page! URL: {current_url}")
                 
             # Debug: Check for common page elements
-            print("🔍 Checking for page elements...")
+            print("[SEARCH] Checking for page elements...")
             body_text = self.get_text("body")[:500]  # First 500 chars
-            print(f"📝 Page body start: {body_text}")
+            print(f"[TEXT] Page body start: {body_text}")
             
             # Check for specific coupons page elements
             elements_to_check = [
@@ -390,34 +390,34 @@ class BaseTestCase(BaseCase):
             
             for selector in elements_to_check:
                 is_present = self.is_element_present(selector)
-                print(f"🔍 Element '{selector}': {'✅ Found' if is_present else '❌ Not found'}")
+                print(f"[SEARCH] Element '{selector}': {'[OK] Found' if is_present else '[FAIL] Not found'}")
                 
             # Try to apply filter with detailed logging
-            print("🔧 Attempting to apply coupon filter...")
+            print("[TOOL] Attempting to apply coupon filter...")
             filter_button = '#mCSB_4_container > li > div > label > button'
             if self.is_element_present(filter_button):
-                print(f"✅ Found filter button: {filter_button}")
+                print(f"[OK] Found filter button: {filter_button}")
                 self.click(filter_button)
                 self.sleep(0.3)
                 print("🔘 Clicked filter button")
             else:
-                print(f"❌ Filter button not found: {filter_button}")
+                print(f"[FAIL] Filter button not found: {filter_button}")
                 
             result_button = '#mCSB_4_container > div > li.wrapperBtnShowResult.showInList > button'
             if self.is_element_present(result_button):
-                print(f"✅ Found result button: {result_button}")
+                print(f"[OK] Found result button: {result_button}")
                 self.click(result_button)
                 self.sleep(0.6)
                 print("🔘 Clicked result button")
             else:
-                print(f"❌ Result button not found: {result_button}")
+                print(f"[FAIL] Result button not found: {result_button}")
                 
             filter_label = '#facet-results > div > ul > li:nth-child(1) > div > button > div > span:nth-child(1)'
             if not self.is_element_present(filter_label):
-                print('⚠️ Warning: filter label not visible - filter may not have applied')
+                print('[WARN] Warning: filter label not visible - filter may not have applied')
                 
                 # Debug: Try alternative filter selectors
-                print("🔍 Searching for alternative filter elements...")
+                print("[SEARCH] Searching for alternative filter elements...")
                 alternative_filters = [
                     "#mCSB_4_container", ".filterContainer", ".facet-results",
                     "[data-filter]", ".filter-button", ".coupon-filter"
@@ -425,20 +425,20 @@ class BaseTestCase(BaseCase):
                 
                 for alt_selector in alternative_filters:
                     if self.is_element_present(alt_selector):
-                        print(f"✅ Found alternative filter element: {alt_selector}")
+                        print(f"[OK] Found alternative filter element: {alt_selector}")
                         # Get the element text for debugging
                         try:
                             element_text = self.get_text(alt_selector)[:200]
-                            print(f"📝 Element text: {element_text}")
+                            print(f"[TEXT] Element text: {element_text}")
                         except:
-                            print(f"⚠️ Could not get text for {alt_selector}")
+                            print(f"[WARN] Could not get text for {alt_selector}")
                     else:
-                        print(f"❌ Alternative filter not found: {alt_selector}")
+                        print(f"[FAIL] Alternative filter not found: {alt_selector}")
             else:
-                print("✅ Filter applied successfully")
+                print("[OK] Filter applied successfully")
                 
         except Exception as e:
-            print(f'❌ Filter application failed: {e}')
+            print(f'[FAIL] Filter application failed: {e}')
             # Continue anyway - maybe coupons are visible without filter
 
         # Collect coupon items using the correct new page structure
@@ -446,20 +446,20 @@ class BaseTestCase(BaseCase):
         # Updated selector based on actual HTML structure
         list_selector = '.couponsCards .tileContainer li'
         
-        print(f"🔍 DEBUG: Searching for coupons with selector: {list_selector}")
+        print(f"[SEARCH] DEBUG: Searching for coupons with selector: {list_selector}")
         
         ads = []
         try:
             ads = self.find_visible_elements(list_selector)
-            print(f"✅ Found {len(ads)} visible elements with find_visible_elements")
+            print(f"[OK] Found {len(ads)} visible elements with find_visible_elements")
         except Exception as e:
-            print(f"⚠️ find_visible_elements failed: {e}")
+            print(f"[WARN] find_visible_elements failed: {e}")
             # find_visible_elements may throw if selector not present
             try:
                 ads = self.find_elements(list_selector)
-                print(f"✅ Found {len(ads)} elements with find_elements")
+                print(f"[OK] Found {len(ads)} elements with find_elements")
             except Exception as e:
-                print(f'❌ Failed to find coupon elements with selector "{list_selector}": {e}')
+                print(f'[FAIL] Failed to find coupon elements with selector "{list_selector}": {e}')
                 
                 # Try alternative selectors
                 alternative_selectors = [
@@ -474,29 +474,29 @@ class BaseTestCase(BaseCase):
                     'li'  # Very broad fallback
                 ]
                 
-                print("🔍 Trying alternative selectors...")
+                print("[SEARCH] Trying alternative selectors...")
                 for alt_selector in alternative_selectors:
                     try:
                         alt_ads = self.find_elements(alt_selector)
                         if len(alt_ads) > 0:
-                            print(f"✅ Alternative selector '{alt_selector}' found {len(alt_ads)} elements")
+                            print(f"[OK] Alternative selector '{alt_selector}' found {len(alt_ads)} elements")
                             # Take a sample to see if they look like coupons
                             if len(alt_ads) > 0:
                                 sample_text = alt_ads[0].text[:100] if hasattr(alt_ads[0], 'text') else "No text"
-                                print(f"📝 Sample element text: {sample_text}")
+                                print(f"[TEXT] Sample element text: {sample_text}")
                                 if len(alt_ads) <= 200:  # Reasonable number for coupons
                                     ads = alt_ads
                                     list_selector = alt_selector
-                                    print(f"🎯 Using alternative selector: {alt_selector}")
+                                    print(f"[TARGET] Using alternative selector: {alt_selector}")
                                     break
                     except Exception:
                         continue
 
-        print(f'📊 Found {len(ads)} coupon items with final selector: {list_selector}')
+        print(f'[DATA] Found {len(ads)} coupon items with final selector: {list_selector}')
         
         # Debug: If still no coupons found, save page source for analysis
         if len(ads) == 0:
-            print("🚨 NO COUPONS FOUND - Performing detailed analysis...")
+            print("[ALERT] NO COUPONS FOUND - Performing detailed analysis...")
             
             # Save page source for debugging
             try:
@@ -505,21 +505,21 @@ class BaseTestCase(BaseCase):
                 os.makedirs(os.path.dirname(debug_file), exist_ok=True)
                 with open(debug_file, 'w', encoding='utf-8') as f:
                     f.write(page_source)
-                print(f"💾 Saved page source to {debug_file} for analysis")
+                print(f"[SAVE] Saved page source to {debug_file} for analysis")
                 
                 # Look for any signs of coupons in the page source
                 coupon_indicators = ['coupon', 'קופון', 'הפעל', 'הנחה', 'הטבה']
                 for indicator in coupon_indicators:
                     if indicator in page_source:
-                        print(f"✅ Found '{indicator}' in page source")
+                        print(f"[OK] Found '{indicator}' in page source")
                     else:
-                        print(f"❌ '{indicator}' not found in page source")
+                        print(f"[FAIL] '{indicator}' not found in page source")
                         
                 # Check page length
-                print(f"📏 Page source length: {len(page_source)} characters")
+                print(f"[SIZE] Page source length: {len(page_source)} characters")
                 
             except Exception as e:
-                print(f"⚠️ Could not save page source: {e}")
+                print(f"[WARN] Could not save page source: {e}")
 
         for i, ad in enumerate(ads):
             if i >= maxRows:
@@ -658,7 +658,7 @@ class BaseTestCase(BaseCase):
                                             from selenium.webdriver.common.action_chains import ActionChains
                                             ActionChains(self.driver).move_to_element(activate_button).perform()
                                             self.sleep(random.uniform(0.2, 0.6))
-                                            print(f"🖱️ Hovered over activation button for: {title}")
+                                            print(f"[MOUSE] Hovered over activation button for: {title}")
                                         except Exception:
                                             pass  # Continue if hover fails
                                     
