@@ -163,7 +163,6 @@ sbase_env/
 latest_logs/
 downloaded_files/driver_fixing.lock
 data/
-SHUFERSAL.sh
 chrome_profiles/
 chrome_profile_backup/shufersal_profile_backup_20250824_085210.tar.gz
 chrome_profile_backup/shufersal_profile_backup_20250825_211523.zip
