@@ -8,8 +8,8 @@ LATEST_LOG="$LOG_DIR/shufersal_latest.log"
 # Create logs directory if it doesn't exist
 mkdir -p "$LOG_DIR"
 
-# Function to log messages with timestamp
-log_message() {
+# Function to log messages with timestamp (before exec redirect)
+log_message_initial() {
     local level="$1"
     shift
     local message="$*"
@@ -17,15 +17,24 @@ log_message() {
     echo "[$timestamp] [$level] $message" | tee -a "$LOG_FILE"
 }
 
-# Function to log and echo
-log_echo() {
-    echo "$*" | tee -a "$LOG_FILE"
+# Function to log messages with timestamp (after exec redirect)
+log_message() {
+    local level="$1"
+    shift
+    local message="$*"
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    echo "[$timestamp] [$level] $message"
 }
 
-# Start logging
-log_message "INFO" "=== SHUFERSAL AUTOMATION EXECUTION STARTED ==="
-log_message "INFO" "Log file: $LOG_FILE"
-log_message "INFO" "Execution started by: $(whoami) on $(hostname)"
+# Function to log and echo
+log_echo() {
+    echo "$*"
+}
+
+# Start logging (before exec redirect)
+log_message_initial "INFO" "=== SHUFERSAL AUTOMATION EXECUTION STARTED ==="
+log_message_initial "INFO" "Log file: $LOG_FILE"
+log_message_initial "INFO" "Execution started by: $(whoami) on $(hostname)"
 
 # Redirect all output to both console and log file
 exec > >(tee -a "$LOG_FILE") 2>&1
