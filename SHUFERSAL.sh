@@ -41,6 +41,20 @@ exec > >(tee -a "$LOG_FILE") 2>&1
 
 source sbase_env/Scripts/activate
 
+# Set up environment for Task Scheduler execution
+log_message "INFO" "Setting up environment for browser automation..."
+
+# Ensure we have a display (for headless fallback)
+export DISPLAY=${DISPLAY:-:0}
+
+# Set Chrome-specific environment variables for Task Scheduler
+export CHROME_NO_SANDBOX=1
+export CHROME_DISABLE_GPU=0
+export CHROME_DISABLE_DEV_SHM_USAGE=1
+
+# Debug environment info
+log_message "INFO" "Environment: USER=$USER, DISPLAY=$DISPLAY, SESSION=$(who am i 2>/dev/null || echo 'unknown')"
+
 # Load credentials from .env file if it exists
 if [ -f .env ]; then
     log_message "INFO" "Loading environment variables from .env file..."
@@ -88,7 +102,7 @@ PYTEST_EXIT_CODE=$?
 
 # Log execution results
 if [ $PYTEST_EXIT_CODE -eq 0 ]; then
-    log_message "SUCCESS" "✅ SHUFERSAL AUTOMATION COMPLETED SUCCESSFULLY"
+    log_message "SUCCESS" "SHUFERSAL AUTOMATION COMPLETED SUCCESSFULLY"
     log_message "SUCCESS" "Exit code: $PYTEST_EXIT_CODE"
     
     # Check if any coupons were found (look for CSV files)
@@ -100,7 +114,7 @@ if [ $PYTEST_EXIT_CODE -eq 0 ]; then
         fi
     fi
 else
-    log_message "ERROR" "❌ SHUFERSAL AUTOMATION FAILED"
+    log_message "ERROR" "SHUFERSAL AUTOMATION FAILED"
     log_message "ERROR" "Exit code: $PYTEST_EXIT_CODE"
     
     # Check for common error patterns in the log
@@ -110,6 +124,12 @@ else
         log_message "ERROR" "Failure reason: Login authentication failed"
     elif grep -q "NO COUPONS FOUND" "$LOG_FILE"; then
         log_message "ERROR" "Failure reason: No coupons found on the page"
+    elif grep -q "SessionNotCreatedException" "$LOG_FILE"; then
+        log_message "ERROR" "Failure reason: Chrome session creation failed (Task Scheduler environment issue)"
+        log_message "ERROR" "Suggestion: Ensure task runs when user is logged in, or switch to headless mode"
+    elif grep -q "cannot connect to chrome at 127.0.0.1:9222" "$LOG_FILE"; then
+        log_message "ERROR" "Failure reason: Chrome debug port connection failed"
+        log_message "ERROR" "Suggestion: Chrome debug port may be blocked or occupied"
     else
         log_message "ERROR" "Failure reason: Unknown error - check log details above"
     fi

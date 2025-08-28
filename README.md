@@ -45,8 +45,8 @@ SAVE=False ACTIVATE=False MAX_ROWS=3 pytest test_shufersal.py --uc -s -v
 ACTIVATE=False MAX_ROWS=2 SAVE=True pytest test_shufersal.py -s -v --uc --headless
 ```
 ### Features
-- 🤖 **Undetected Chrome Mode**: Bypasses bot detection automatically
-- 🍪 **Cookie Persistence**: Saves login sessions in JSON files for reuse
-- 🔄 **Auto Login**: Handles Hebrew interface and login flow
-- 📊 **Data Export**: Saves coupon data to timestamped CSV files
-- ⚡ **Smart Activation**: Only activates available coupons
+- **Undetected Chrome Mode**: Bypasses bot detection automatically
+- **Cookie Persistence**: Saves login sessions in JSON files for reuse
+- **Auto Login**: Handles Hebrew interface and login flow
+- **Data Export**: Saves coupon data to timestamped CSV files
+- **Smart Activation**: Only activates available coupons

@@ -68,6 +68,20 @@ cleanup_browser_processes() {
     log_cleanup "INFO" "Detected OS: $os"
     log_cleanup "INFO" "Starting browser process cleanup..."
     
+    # Kill any processes using Chrome debug ports
+    case "$os" in
+        "windows")
+            log_cleanup "INFO" "Checking for processes using Chrome debug ports..."
+            netstat -ano | grep ":9222" | awk '{print $5}' | xargs -I {} taskkill //F //PID {} > /dev/null 2>&1 || true
+            netstat -ano | grep ":9223" | awk '{print $5}' | xargs -I {} taskkill //F //PID {} > /dev/null 2>&1 || true
+            ;;
+        "linux"|"macos")
+            log_cleanup "INFO" "Checking for processes using Chrome debug ports..."
+            lsof -ti :9222 | xargs -I {} kill -9 {} > /dev/null 2>&1 || true
+            lsof -ti :9223 | xargs -I {} kill -9 {} > /dev/null 2>&1 || true
+            ;;
+    esac
+    
     # List of processes to clean up (only automation-related)
     local processes=(
         "chrome.exe"

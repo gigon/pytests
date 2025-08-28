@@ -7,6 +7,24 @@ from seleniumbase import SB
 from selenium_stealth import stealth
 from seleniumbase import BaseCase
 
+def safe_print(message):
+    """Print message with Unicode handling for Windows console compatibility"""
+    try:
+        # First sanitize the message using safe_text
+        safe_message = safe_text(str(message))
+        print(safe_message)
+    except UnicodeEncodeError:
+        # If even the sanitized version fails, use ASCII replacement
+        ascii_message = str(message).encode('ascii', 'replace').decode('ascii')
+        print(ascii_message)
+    except Exception as e:
+        # Fallback for any other encoding issues
+        print(f"[ENCODING ERROR] Could not display message: {type(e).__name__}")
+
+def safe_text(text):
+    """Keep original text intact - only used for data storage, not console output"""
+    return text if text else text
+
 # Load environment variables from .env file
 try:
     from dotenv import load_dotenv
@@ -111,16 +129,16 @@ class BaseTestCase(BaseCase):
                 try:
                     # Look for the submit button with the correct class
                     if self.is_element_present('#loginForm button[type="submit"].btn-login'):
-                        print("🔘 Clicking login button (btn-login)...")
+                        print("Clicking login button (btn-login)...")
                         self.click('#loginForm button[type="submit"].btn-login')
                     elif self.is_element_present('#loginForm > button'):
-                        print("🔘 Clicking login form button...")
+                        print("Clicking login form button...")
                         self.click('#loginForm > button')
                     elif self.is_element_present('button[type="submit"]'):
-                        print("🔘 Clicking submit button...")
+                        print("Clicking submit button...")
                         self.click('button[type="submit"]')
                     else:
-                        print("🔘 No button found, trying Enter key...")
+                        print("No button found, trying Enter key...")
                         self.send_keys('#j_password', '\n')
                 except Exception as e:
                     print(f"[WARN] Error clicking login button: {e}")
@@ -300,10 +318,10 @@ class BaseTestCase(BaseCase):
                 if random.random() < 0.15:  # 15% chance when resizing
                     try:
                         self.driver.minimize_window()
-                        print("📉 Minimized window")
+                        print("Minimized window")
                         self.sleep(random.uniform(0.5, 1.2))
                         self.driver.maximize_window()
-                        print("📈 Restored window")
+                        print("Restored window")
                         self.sleep(random.uniform(0.3, 0.8))
                     except Exception:
                         pass  # Some drivers don't support minimize
@@ -344,7 +362,11 @@ class BaseTestCase(BaseCase):
                 else:
                     print("[INFO] No disclaimer message found")
             except Exception as e:
-                print(f"[WARN] Could not close disclaimer: {e}")
+                # Handle Unicode encoding at the most basic level
+                try:
+                    safe_print("[WARN] Could not close disclaimer: " + str(e).encode('ascii', 'replace').decode('ascii'))
+                except:
+                    safe_print("[WARN] Could not close disclaimer: [Error details contain unsupported characters]")
         else:
             print("[DICE] Randomly chose not to close disclaimer (human-like behavior)")
         
@@ -361,7 +383,8 @@ class BaseTestCase(BaseCase):
                     self.refresh_page()
                     self.sleep(random.uniform(2.0, 4.0))
             except Exception as e:
-                print(f"[WARN] Could not perform reading simulation: {e}")
+                # Completely avoid f-string interpolation to prevent Unicode encoding during string formation
+                safe_print("[WARN] Could not perform reading simulation: " + str(e).encode('ascii', 'replace').decode('ascii'))
 
         # At this point we should be on the coupons page (or close) - apply filter to show only non-activated coupons
         try:
@@ -399,7 +422,7 @@ class BaseTestCase(BaseCase):
                 print(f"[OK] Found filter button: {filter_button}")
                 self.click(filter_button)
                 self.sleep(0.3)
-                print("🔘 Clicked filter button")
+                print("Clicked filter button")
             else:
                 print(f"[FAIL] Filter button not found: {filter_button}")
                 
@@ -408,7 +431,7 @@ class BaseTestCase(BaseCase):
                 print(f"[OK] Found result button: {result_button}")
                 self.click(result_button)
                 self.sleep(0.6)
-                print("🔘 Clicked result button")
+                print("Clicked result button")
             else:
                 print(f"[FAIL] Result button not found: {result_button}")
                 
@@ -429,7 +452,7 @@ class BaseTestCase(BaseCase):
                         # Get the element text for debugging
                         try:
                             element_text = self.get_text(alt_selector)[:200]
-                            print(f"[TEXT] Element text: {element_text}")
+                            safe_print(f"[TEXT] Element text: {element_text}")
                         except:
                             print(f"[WARN] Could not get text for {alt_selector}")
                     else:
@@ -438,7 +461,8 @@ class BaseTestCase(BaseCase):
                 print("[OK] Filter applied successfully")
                 
         except Exception as e:
-            print(f'[FAIL] Filter application failed: {e}')
+            # Completely avoid f-string interpolation to prevent Unicode encoding during string formation
+            safe_print('[FAIL] Filter application failed: ' + str(e).encode('ascii', 'replace').decode('ascii'))
             # Continue anyway - maybe coupons are visible without filter
 
         # Collect coupon items using the correct new page structure
@@ -535,14 +559,14 @@ class BaseTestCase(BaseCase):
                 try:
                     # Look for the description within buyDescription comment tags
                     description_elem = ad.find_element("css selector", ".description")
-                    description = description_elem.text.strip()
+                    description = safe_text(description_elem.text.strip())
                     
                     # Try to extract store/brand name (usually at the end after comma)
                     if ',' in description:
                         parts = description.split(',')
                         if len(parts) >= 2:
-                            title = parts[0].strip()
-                            store = parts[-1].strip()
+                            title = safe_text(parts[0].strip())
+                            store = safe_text(parts[-1].strip())
                         else:
                             title = description
                     else:
@@ -625,7 +649,7 @@ class BaseTestCase(BaseCase):
                     pass
                 
                 # Debug: Print coupon details
-                print(f'Coupon {i+1}: {title} | {store} | {percent}')
+                safe_print(f'Coupon {i+1}: {title} | {store} | {percent}')
                 
                 if activateCoupons:
                     try:
@@ -674,21 +698,21 @@ class BaseTestCase(BaseCase):
                                     
                                     row['activated'] = True
                                     activated = True
-                                    print(f'✓ Activated coupon: {title}')
+                                    safe_print(f'Activated coupon: {title}')
                                 else:
-                                    print(f'⚠ Button found but text is: "{btn_text}" (not activation)')
+                                    safe_print(f'Warning: Button found but text is: "{btn_text}" (not activation)')
                             else:
-                                print(f'⚠ Activation button not clickable for: {title}')
+                                safe_print(f'Warning: Activation button not clickable for: {title}')
                         except Exception as e:
-                            print(f'⚠ Could not find activation button for: {title} - {e}')
+                            safe_print(f'Warning: Could not find activation button for: {title} - {e}')
                             
                     except Exception as e:
-                        print(f'Failed to activate coupon {i+1}: {e}')
+                        safe_print(f'Failed to activate coupon {i+1}: {e}')
 
                 rows.append(row)
                 
             except Exception as e:
-                print(f'Error processing coupon {i+1}: {e}')
+                safe_print(f'Error processing coupon {i+1}: {e}')
                 continue
 
         # Save results to CSV if requested
