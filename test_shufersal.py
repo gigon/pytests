@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 import sys
 import datetime
@@ -7,19 +8,32 @@ from seleniumbase import SB
 from selenium_stealth import stealth
 from seleniumbase import BaseCase
 
+# Ensure UTF-8 encoding for stdout/stderr
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8')
+
 def safe_print(message):
     """Print message with Unicode handling for Windows console compatibility"""
     try:
-        # First sanitize the message using safe_text
-        safe_message = safe_text(str(message))
-        print(safe_message)
-    except UnicodeEncodeError:
-        # If even the sanitized version fails, use ASCII replacement
-        ascii_message = str(message).encode('ascii', 'replace').decode('ascii')
-        print(ascii_message)
+        # Ensure we use UTF-8 encoding and preserve Hebrew characters
+        if isinstance(message, str):
+            # Try to print directly with UTF-8
+            sys.stdout.buffer.write((message + '\n').encode('utf-8'))
+            sys.stdout.flush()
+        else:
+            # Convert to string and print with UTF-8
+            text = str(message)
+            sys.stdout.buffer.write((text + '\n').encode('utf-8'))
+            sys.stdout.flush()
     except Exception as e:
-        # Fallback for any other encoding issues
-        print(f"[ENCODING ERROR] Could not display message: {type(e).__name__}")
+        # Last resort: use regular print with error message
+        try:
+            print(f"[ENCODING ERROR] Could not display message properly: {type(e).__name__}")
+            print(repr(message))  # Show the raw representation
+        except:
+            print("[CRITICAL ENCODING ERROR] Could not display message at all")
 
 def safe_text(text):
     """Keep original text intact - only used for data storage, not console output"""

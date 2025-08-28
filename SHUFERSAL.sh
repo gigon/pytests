@@ -36,8 +36,14 @@ log_message_initial "INFO" "=== SHUFERSAL AUTOMATION EXECUTION STARTED ==="
 log_message_initial "INFO" "Log file: $LOG_FILE"
 log_message_initial "INFO" "Execution started by: $(whoami) on $(hostname)"
 
-# Redirect all output to both console and log file
-exec > >(tee -a "$LOG_FILE") 2>&1
+# Set UTF-8 encoding for proper Hebrew character support
+export LANG=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
+export PYTHONIOENCODING=utf-8
+export PYTHONUTF8=1
+
+# Redirect all output to both console and log file with UTF-8 support
+exec > >(PYTHONIOENCODING=utf-8 tee -a "$LOG_FILE") 2>&1
 
 source sbase_env/Scripts/activate
 
