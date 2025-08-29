@@ -7,6 +7,7 @@ import json
 from seleniumbase import SB
 from selenium_stealth import stealth
 from seleniumbase import BaseCase
+from coupon_preferences import CouponPreferencesManager
 
 # Ensure UTF-8 encoding for stdout/stderr
 if hasattr(sys.stdout, 'reconfigure'):
@@ -202,6 +203,17 @@ class BaseTestCase(BaseCase):
         activateCoupons = os.getenv("ACTIVATE", 'True').lower() in ('true', '1', 't')
         save = os.getenv("SAVE", 'True').lower() in ('true', '1', 't')
         maxRows = int(os.environ.get('MAX_ROWS', sys.maxsize))
+        use_preferences = os.getenv("USE_PREFERENCES", 'True').lower() in ('true', '1', 't')
+
+        # Initialize preferences manager
+        preferences_manager = None
+        if use_preferences:
+            try:
+                preferences_manager = CouponPreferencesManager()
+                print(f"[PREFERENCES] Loaded coupon preferences from {preferences_manager.preferences_file}")
+            except Exception as e:
+                print(f"[PREFERENCES] Error loading preferences: {e}")
+                print("[PREFERENCES] Continuing without preferences...")
 
         # Check if running in headless mode (for CI/CD compatibility)
         self.is_headless = '--headless' in sys.argv or self.driver.get_window_size().get('width', 0) == 0
@@ -210,7 +222,7 @@ class BaseTestCase(BaseCase):
 
         # NEW coupons URL
         url = "https://www.shufersal.co.il/online/he/coupons"
-        print("activateCoupons=%s save=%s maxRows=%d url=%s" % (activateCoupons, save, maxRows, url))
+        print("activateCoupons=%s save=%s maxRows=%d use_preferences=%s url=%s" % (activateCoupons, save, maxRows, use_preferences, url))
 
         # Navigate directly to coupons page - let stealth handle the rest
         print(f"[WEB] Navigating to: {url}")
@@ -641,7 +653,9 @@ class BaseTestCase(BaseCase):
                     'percent': percent,
                     'dateValid': '',  # Will be extracted from smallText grayBg
                     'restrictions': '',  # Will be extracted from smallText grayBg
-                    'activated': False  # Will be set to True if activation succeeds
+                    'activated': False,  # Will be set to True if activation succeeds
+                    'preference_level': 'medium',  # Default preference level
+                    'preference_category': 'default'  # Default category
                 }
                 
                 # Extract validity date and restrictions from the smallText section
@@ -662,10 +676,32 @@ class BaseTestCase(BaseCase):
                     # If extraction fails, keep empty strings
                     pass
                 
-                # Debug: Print coupon details
-                safe_print(f'Coupon {i+1}: {title} | {store} | {percent}')
                 
-                if activateCoupons:
+                # Analyze coupon preferences if preferences manager is available
+                if preferences_manager:
+                    try:
+                        preference_level, preference_category = preferences_manager.analyze_coupon(
+                            title, description, store
+                        )
+                        row['preference_level'] = preference_level
+                        row['preference_category'] = preference_category
+                    except Exception as e:
+                        safe_print(f'Warning: Error analyzing preferences for coupon {i+1}: {e}')
+                
+                # Debug: Print coupon details with preference info
+                pref_info = f" [Pref: {row['preference_level']}]" if preferences_manager else ""
+                safe_print(f'Coupon {i+1}: {title} | {store} | {percent}{pref_info}')
+                
+                # Determine if coupon should be activated based on preferences
+                should_activate_based_on_prefs = True
+                if preferences_manager and use_preferences:
+                    should_activate_based_on_prefs = preferences_manager.should_activate_coupon(
+                        title, description, store
+                    )
+                    if not should_activate_based_on_prefs:
+                        safe_print(f'Skipping activation due to preferences: {title}')
+                
+                if activateCoupons and should_activate_based_on_prefs:
                     try:
                         # Look for the activation button - based on actual HTML structure
                         activated = False
@@ -749,6 +785,20 @@ class BaseTestCase(BaseCase):
                 print(f'Failed to save CSV: {e}')
 
         activated_count = sum(1 for row in rows if row.get('activated', False))
+        
+        # Preference statistics
+        if preferences_manager and rows:
+            pref_stats = {}
+            for row in rows:
+                level = row.get('preference_level', 'unknown')
+                pref_stats[level] = pref_stats.get(level, 0) + 1
+            
+            skipped_count = sum(1 for row in rows if not row.get('activated', False) and 
+                              row.get('preference_level') == 'not_at_all')
+            
+            print(f'Preference Statistics: {pref_stats}')
+            print(f'Skipped due to preferences: {skipped_count}')
+        
         print(f'Summary: Found {len(rows)} coupons, activated {activated_count}')
 
 

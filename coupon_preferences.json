@@ -1,0 +1,83 @@
+{
+  "dairy_high": {
+    "keywords": [
+      "חלב",
+      "גבינה",
+      "יוגורט",
+      "חלב",
+      "דניאלה",
+      "יטבתה",
+      "שטראוס",
+      "תנובה"
+    ],
+    "level": "high",
+    "notes": "Dairy products - frequently used"
+  },
+  "bread_high": {
+    "keywords": [
+      "לחם",
+      "לחמניה",
+      "בייגל",
+      "פיתה",
+      "מלווח"
+    ],
+    "level": "high",
+    "notes": "Bread and bakery products"
+  },
+  "cleaning_medium": {
+    "keywords": [
+      "ניקוי",
+      "סבון",
+      "אל סבון",
+      "מדיח",
+      "כביסה",
+      "פיניש"
+    ],
+    "level": "medium",
+    "notes": "Cleaning products - occasional need"
+  },
+  "snacks_medium": {
+    "keywords": [
+      "חטיף",
+      "עוגיות",
+      "ביסקוויט",
+      "שוקולד",
+      "גלידה"
+    ],
+    "level": "medium",
+    "notes": "Snacks and sweets"
+  },
+  "alcohol_not_at_all": {
+    "keywords": [
+      "בירה",
+      "יין",
+      "וודקה",
+      "וויסקי",
+      "ליקר",
+      "אלכוהול"
+    ],
+    "level": "not_at_all",
+    "notes": "Alcohol - not interested"
+  },
+  "pet_food_not_at_all": {
+    "keywords": [
+      "מזון לכלבים",
+      "מזון לחתולים",
+      "בונזו",
+      "לה קט",
+      "חיות"
+    ],
+    "level": "not_at_all",
+    "notes": "Pet food - no pets"
+  },
+  "baby_products_not_at_all": {
+    "keywords": [
+      "תינוק",
+      "חיתול",
+      "מזון תינוקות",
+      "בייבי"
+    ],
+    "level": "not_at_all",
+    "notes": "Baby products - not needed"
+  }
+}
