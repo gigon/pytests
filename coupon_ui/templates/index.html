@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shufersal Coupon Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .coupon-card {
+            transition: all 0.2s ease;
+            border-left: 4px solid #dee2e6;
+        }
+        .coupon-card:hover {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .coupon-card.excluded {
+            border-left-color: #dc3545;
+            background-color: #f8d7da;
+        }
+        .coupon-card.emphasized {
+            border-left-color: #198754;
+            background-color: #d1e7dd;
+        }
+        .coupon-card.activated {
+            border-left-color: #0d6efd;
+            background-color: #cff4fc;
+        }
+        .filter-badge {
+            font-size: 0.8rem;
+        }
+        .stats-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+        }
+        .btn-toggle {
+            font-size: 0.8rem;
+            margin: 0.1rem;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="bi bi-receipt"></i> Shufersal Coupon Manager
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="{{ url_for('import_page') }}">
+                    <i class="bi bi-upload"></i> Import
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Statistics Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card stats-card">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">{{ stats.total }}</h5>
+                        <p class="card-text">Total Coupons</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-success">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">{{ stats.emphasized }}</h5>
+                        <p class="card-text">Emphasized</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-danger">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">{{ stats.excluded }}</h5>
+                        <p class="card-text">Excluded</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-info">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">{{ stats.activated }}</h5>
+                        <p class="card-text">Activated</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter and Search Controls -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <form method="GET" class="row g-3">
+                    <div class="col-md-3">
+                        <label for="filter" class="form-label">Filter</label>
+                        <select class="form-select" name="filter" id="filter">
+                            <option value="all" {% if filter_type == 'all' %}selected{% endif %}>All Coupons</option>
+                            <option value="emphasized" {% if filter_type == 'emphasized' %}selected{% endif %}>Emphasized</option>
+                            <option value="excluded" {% if filter_type == 'excluded' %}selected{% endif %}>Excluded</option>
+                            <option value="active" {% if filter_type == 'active' %}selected{% endif %}>Activated</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="sort" class="form-label">Sort By</label>
+                        <select class="form-select" name="sort" id="sort">
+                            <option value="scraped_at" {% if sort_by == 'scraped_at' %}selected{% endif %}>Date Scraped</option>
+                            <option value="title" {% if sort_by == 'title' %}selected{% endif %}>Title</option>
+                            <option value="date_valid" {% if sort_by == 'date_valid' %}selected{% endif %}>Valid Until</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="order" class="form-label">Order</label>
+                        <select class="form-select" name="order" id="order">
+                            <option value="desc" {% if sort_order == 'desc' %}selected{% endif %}>Descending</option>
+                            <option value="asc" {% if sort_order == 'asc' %}selected{% endif %}>Ascending</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="search" class="form-label">Search</label>
+                        <input type="text" class="form-control" name="search" id="search" 
+                               value="{{ search }}" placeholder="Search coupons...">
+                    </div>
+                    <div class="col-md-1">
+                        <label class="form-label">&nbsp;</label>
+                        <button type="submit" class="btn btn-primary d-block">
+                            <i class="bi bi-search"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Coupons List -->
+        <div id="coupons-container">
+            {% if coupons %}
+                {% for coupon in coupons %}
+                <div class="card coupon-card mb-3 
+                    {% if coupon.is_excluded %}excluded{% endif %}
+                    {% if coupon.is_emphasized %}emphasized{% endif %}
+                    {% if coupon.activated %}activated{% endif %}" 
+                    data-coupon-id="{{ coupon.id }}">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h5 class="card-title">{{ coupon.title }}</h5>
+                                {% if coupon.subtitle %}
+                                <p class="card-text text-muted">{{ coupon.subtitle }}</p>
+                                {% endif %}
+                                {% if coupon.restrictions %}
+                                <p class="card-text"><small class="text-muted">
+                                    <i class="bi bi-info-circle"></i> {{ coupon.restrictions }}
+                                </small></p>
+                                {% endif %}
+                                {% if coupon.date_valid %}
+                                <p class="card-text"><small class="text-muted">
+                                    <i class="bi bi-calendar"></i> Valid until: {{ coupon.date_valid }}
+                                </small></p>
+                                {% endif %}
+                                <p class="card-text"><small class="text-muted">
+                                    <i class="bi bi-clock"></i> Scraped: {{ coupon.scraped_at.strftime('%Y-%m-%d %H:%M') if coupon.scraped_at else 'Unknown' }}
+                                </small></p>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <!-- Status Badges -->
+                                {% if coupon.is_excluded %}
+                                <span class="badge bg-danger filter-badge">Excluded</span>
+                                {% endif %}
+                                {% if coupon.is_emphasized %}
+                                <span class="badge bg-success filter-badge">Emphasized</span>
+                                {% endif %}
+                                {% if coupon.activated %}
+                                <span class="badge bg-info filter-badge">Activated</span>
+                                {% endif %}
+                                
+                                <!-- Action Buttons -->
+                                <div class="mt-2">
+                                    <button class="btn btn-sm btn-outline-danger btn-toggle" 
+                                            onclick="toggleCouponStatus({{ coupon.id }}, 'exclude')"
+                                            {% if coupon.is_excluded %}style="background-color: #dc3545; color: white;"{% endif %}>
+                                        <i class="bi bi-x-circle"></i> 
+                                        {% if coupon.is_excluded %}Un-exclude{% else %}Exclude{% endif %}
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-success btn-toggle" 
+                                            onclick="toggleCouponStatus({{ coupon.id }}, 'emphasize')"
+                                            {% if coupon.is_emphasized %}style="background-color: #198754; color: white;"{% endif %}>
+                                        <i class="bi bi-star"></i> 
+                                        {% if coupon.is_emphasized %}Un-emphasize{% else %}Emphasize{% endif %}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="card">
+                    <div class="card-body text-center text-muted">
+                        <i class="bi bi-inbox fs-1"></i>
+                        <h5>No coupons found</h5>
+                        <p>Try adjusting your filters or <a href="{{ url_for('import_page') }}">import some data</a>.</p>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function toggleCouponStatus(couponId, action) {
+            fetch(`/api/coupons/${couponId}/toggle`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ action: action })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Reload the page to update the UI
+                    window.location.reload();
+                } else {
+                    alert('Error updating coupon status');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error updating coupon status');
+            });
+        }
+        
+        // Auto-submit form when filter/sort changes
+        document.getElementById('filter').addEventListener('change', function() {
+            this.form.submit();
+        });
+        document.getElementById('sort').addEventListener('change', function() {
+            this.form.submit();
+        });
+        document.getElementById('order').addEventListener('change', function() {
+            this.form.submit();
+        });
+    </script>
+</body>
+</html>
