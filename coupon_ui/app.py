@@ -18,7 +18,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'shufersal-coupon-ui-secret-key'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///coupons.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.abspath("coupons.db")}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
