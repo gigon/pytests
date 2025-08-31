@@ -1,8 +1,10 @@
 # pytests
 
-Only once:
+### Setting up a local python 3 virtual env (not in Google Colab) 
+Install python 3.9 or higher and run once:
 ```
 python -m venv sbase_env
+source sbase_env/Scripts/activate
 ./firstTime.sh
 ```
 

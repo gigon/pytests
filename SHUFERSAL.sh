@@ -64,15 +64,10 @@ log_message "INFO" "Environment: USER=$USER, DISPLAY=$DISPLAY, SESSION=$(who am 
 # Load credentials from .env file if it exists
 if [ -f .env ]; then
     log_message "INFO" "Loading environment variables from .env file..."
-    export $(grep -E '^SHUFERSAL_EMAIL=' .env | xargs)
-    export $(grep -E '^SHUFERSAL_PSWD=' .env | xargs)
-    
-    # Check if credentials were loaded (without exposing them)
-    if [ -n "$SHUFERSAL_EMAIL" ] && [ -n "$SHUFERSAL_PSWD" ]; then
-        log_message "INFO" "Credentials loaded successfully"
-    else
-        log_message "ERROR" "Failed to load credentials from .env file"
-    fi
+    set -a
+    source .env
+    set +a
+    log_message "INFO" "Environment variables loaded successfully"
 else
     log_message "WARNING" ".env file not found"
 fi

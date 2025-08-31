@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# (did you run source sbase_env/bin/activate ?)
+source sbase_env/Scripts/activate
 
 python -m pip install --upgrade pip
 python -m pip install --upgrade wheel
